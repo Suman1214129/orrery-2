@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
-  ChevronLeft, User, Palette, Keyboard, Key,
+  ChevronLeft, User, Palette, Keyboard,
   Check, Edit2, X, LogOut, Sun, Moon, Monitor,
 } from 'lucide-react'
 import * as Avatar from '@radix-ui/react-avatar'
@@ -12,7 +12,6 @@ import * as Switch from '@radix-ui/react-switch'
 import { useAuthStore } from '@/store/auth'
 import { useSettingsStore } from '@/store/settings'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { Tooltip, TooltipProvider } from '@/components/ui/Tooltip'
 import { createClient } from '@/lib/supabase/client'
 import { cn, displayHotkey, parseHotkey } from '@/lib/utils'
@@ -21,10 +20,7 @@ import { HOTKEY_LABELS, DEFAULT_HOTKEYS, type HotkeyMap } from '@/types'
 export default function SettingsPage() {
   const router = useRouter()
   const { user } = useAuthStore()
-  const { theme, hotkeys, openrouterKey, setTheme, setHotkey, setOpenrouterKey, saveSettings } = useSettingsStore()
-
-  const [apiKeyInput, setApiKeyInput] = useState(openrouterKey)
-  const [apiKeySaved, setApiKeySaved] = useState(false)
+  const { theme, hotkeys, setTheme, setHotkey, saveSettings } = useSettingsStore()
   const [recordingKey, setRecordingKey] = useState<keyof HotkeyMap | null>(null)
   const [recordedCombo, setRecordedCombo] = useState<string>('')
 
@@ -36,13 +32,6 @@ export default function SettingsPage() {
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/sign-in')
-  }
-
-  async function saveApiKey() {
-    setOpenrouterKey(apiKeyInput)
-    if (user) await saveSettings(user.id)
-    setApiKeySaved(true)
-    setTimeout(() => setApiKeySaved(false), 2000)
   }
 
   // Hotkey recording
@@ -116,7 +105,6 @@ export default function SettingsPage() {
                   { value: 'account', label: 'Account', icon: User },
                   { value: 'appearance', label: 'Appearance', icon: Palette },
                   { value: 'hotkeys', label: 'Keyboard shortcuts', icon: Keyboard },
-                  { value: 'ai', label: 'AI', icon: Key },
                 ].map(({ value, label, icon: Icon }) => (
                   <Tabs.Trigger
                     key={value}
@@ -147,9 +135,6 @@ export default function SettingsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-[var(--text)] truncate">{displayName}</p>
                       <p className="text-xs text-[var(--text-muted)] truncate">{email}</p>
-                      <p className="text-[10px] text-[var(--text-subtle)] mt-1">
-                        Avatar synced from your OAuth provider
-                      </p>
                     </div>
                   </div>
 
@@ -286,38 +271,6 @@ export default function SettingsPage() {
                 </motion.div>
               </Tabs.Content>
 
-              {/* AI */}
-              <Tabs.Content value="ai">
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                  <div>
-                    <h3 className="text-sm font-semibold text-[var(--text)] mb-1">OpenRouter API Key</h3>
-                    <p className="text-xs text-[var(--text-muted)] mb-3">
-                      Used for AI branch generation and note Q&A. Get a key at{' '}
-                      <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">
-                        openrouter.ai
-                      </a>
-                    </p>
-                    <div className="flex gap-2">
-                      <Input
-                        type="password"
-                        value={apiKeyInput}
-                        onChange={(e) => setApiKeyInput(e.target.value)}
-                        placeholder="sk-or-v1-…"
-                        className="flex-1 font-mono text-xs"
-                      />
-                      <Button onClick={saveApiKey} disabled={!apiKeyInput}>
-                        {apiKeySaved ? <Check size={14} /> : 'Save'}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)]">
-                    <p className="text-xs font-medium text-[var(--text)] mb-1">Model</p>
-                    <p className="text-xs text-[var(--text-muted)]">nvidia/nemotron-3-ultra-550b-a55b:free</p>
-                    <p className="text-[11px] text-[var(--text-subtle)] mt-1">Via OpenRouter — free tier</p>
-                  </div>
-                </motion.div>
-              </Tabs.Content>
             </Tabs.Root>
           </div>
         </div>

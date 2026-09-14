@@ -69,7 +69,6 @@ SUPABASE_SERVICE_ROLE_KEY=...
   - Account (avatar from OAuth, name, email, sign out)
   - Theme (light / dark / system) — olive primary accent
   - Keyboard shortcuts — all editable, press to record, save/reset per key
-  - AI — OpenRouter API key management
 
 ## Keyboard shortcuts (defaults)
 
