@@ -3,9 +3,16 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/home'
+
+  // Derive the correct origin — respect x-forwarded-host on Vercel
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
+  const origin = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : new URL(request.url).origin
 
   if (code) {
     const cookieStore = await cookies()
@@ -28,8 +35,10 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
+    console.error('[auth/callback] exchangeCodeForSession error:', error.message)
+  } else {
+    console.error('[auth/callback] No code in URL params')
   }
 
-  // Something went wrong — send back to sign-in with error
   return NextResponse.redirect(`${origin}/sign-in?error=auth_callback_failed`)
 }
