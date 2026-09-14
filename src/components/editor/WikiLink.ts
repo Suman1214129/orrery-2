@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Node, mergeAttributes } from '@tiptap/react'
 import Suggestion, { type SuggestionOptions } from '@tiptap/suggestion'
+import { PluginKey } from '@tiptap/pm/state'
 import { ReactRenderer } from '@tiptap/react'
 import tippy from 'tippy.js'
 import { SuggestionList } from './SuggestionList'
@@ -22,6 +23,7 @@ export const WikiLink = Node.create<WikiLinkOptions>({
       HTMLAttributes: {},
       suggestion: {
         char: '[[',
+        pluginKey: new PluginKey('wikiLinkSuggestion'),
         command: ({ editor, range, props }: any) => {
           editor.chain().focus().deleteRange(range).insertContent({
             type: 'wikiLink',
