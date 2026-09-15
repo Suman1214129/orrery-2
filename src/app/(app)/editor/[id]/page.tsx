@@ -201,9 +201,12 @@ export default function EditorPage() {
   useEffect(() => { if (noteId) loadCheckpoints(noteId) }, [noteId, loadCheckpoints])
 
   useEffect(() => {
-    function toggleMainSidebar() { setMainSidebarOpen(v => !v) }
-    document.addEventListener('orrery:toggle-main-sidebar', toggleMainSidebar)
-    return () => document.removeEventListener('orrery:toggle-main-sidebar', toggleMainSidebar)
+    function setMainSidebar(event: Event) {
+      const open = (event as CustomEvent<{ open: boolean }>).detail?.open
+      if (typeof open === 'boolean') setMainSidebarOpen(open)
+    }
+    document.addEventListener('orrery:set-main-sidebar', setMainSidebar)
+    return () => document.removeEventListener('orrery:set-main-sidebar', setMainSidebar)
   }, [])
 
   const handleContentChange = useCallback((html: string) => {
@@ -304,7 +307,7 @@ export default function EditorPage() {
 
         {/* LEFT panel — collapsible */}
         <AnimatePresence mode="wait" initial={false}>
-          {view === 'editor' && !mainSidebarOpen ? (
+          {view === 'editor' && !mainSidebarOpen && (
             <motion.div key="doc-panel"
               initial={{ width: 0, opacity: 0 }} animate={{ width: sidebarCollapsed ? 28 : 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -335,7 +338,8 @@ export default function EditorPage() {
                 </>
               )}
             </motion.div>
-          ) : view !== 'editor' && !mainSidebarOpen ? (
+          )}
+          {view !== 'editor' && !mainSidebarOpen && (
             <motion.div key="ai-panel"
               initial={{ width: 0, opacity: 0 }} animate={{ width: sidebarCollapsed ? 28 : 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}

@@ -4,11 +4,10 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useNotesStore } from '@/store/notes'
 import { useAuthStore } from '@/store/auth'
 import { useSettingsStore } from '@/store/settings'
-import { matchesHotkey } from '@/lib/utils'
+import { cn, matchesHotkey } from '@/lib/utils'
 import { Sidebar } from './Sidebar'
 import { SettingsModal } from './SettingsModal'
 import { PanelLeft, Search } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore()
@@ -27,9 +26,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return
     }
 
-    function toggleMainSidebar() { setMainSidebarOpen(v => !v) }
-    document.addEventListener('orrery:toggle-main-sidebar', toggleMainSidebar)
-    return () => document.removeEventListener('orrery:toggle-main-sidebar', toggleMainSidebar)
+    function setMainSidebar(event: Event) {
+      const open = (event as CustomEvent<{ open: boolean }>).detail?.open
+      if (typeof open === 'boolean') setMainSidebarOpen(open)
+    }
+    document.addEventListener('orrery:set-main-sidebar', setMainSidebar)
+    return () => document.removeEventListener('orrery:set-main-sidebar', setMainSidebar)
   }, [isEditor])
 
   useEffect(() => {
@@ -87,10 +89,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {isEditor && (
         <button
           type="button"
-          onClick={() => document.dispatchEvent(new CustomEvent('orrery:toggle-main-sidebar'))}
+          onClick={() => document.dispatchEvent(new CustomEvent('orrery:set-main-sidebar', { detail: { open: !mainSidebarOpen } }))}
           className={cn(
             'fixed bottom-4 z-[61] flex items-center gap-1.5 h-8 px-2.5 rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow-md)] text-xs text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--text-subtle)] transition-all focus:outline-none',
-            mainSidebarOpen ? 'left-[252px]' : 'left-3'
+            'left-3'
           )}
           aria-label={mainSidebarOpen ? 'Show editor sidebar' : 'Show main sidebar'}
         >
