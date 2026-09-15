@@ -1,7 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Plus, FileText, Clock, ChevronRight } from 'lucide-react'
+import { Plus, FileText, Clock } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useAuthStore } from '@/store/auth'
 import { Button } from '@/components/ui/Button'
@@ -24,35 +24,6 @@ export default function HomePage() {
   return (
     <TooltipProvider>
       <div className="flex flex-col h-full overflow-hidden">
-
-        {/* ── Inner toolbar (shrink-0) — mirrors Preline template-preview-toolbar ── */}
-        <div className="shrink-0 px-3 pt-2 pb-1.5 sm:px-4 border-b border-[var(--border)]">
-          <div className="flex items-center gap-1.5 md:gap-3">
-
-            {/* Title + breadcrumb path */}
-            <div className="min-w-0 flex flex-col justify-center flex-1">
-              <div className="flex items-center gap-x-1.5 min-w-0">
-                <h1 className="truncate text-base font-semibold text-[var(--text)]">Orrery</h1>
-                <span className="text-[var(--text-subtle)]">&middot;</span>
-                <p className="block truncate text-sm text-[var(--text-muted)]">Home</p>
-              </div>
-              <nav className="flex items-center gap-x-1 text-xs text-[var(--text-subtle)]">
-                <span className="truncate font-medium text-[var(--text-muted)]">Notes</span>
-                <ChevronRight className="shrink-0 size-3 text-[var(--border)]" />
-                <span className="truncate font-medium text-[var(--text)]">Recent</span>
-              </nav>
-            </div>
-
-            {/* Right controls */}
-            <div className="flex items-center gap-1 shrink-0">
-              <Button size="sm" onClick={handleNewNote}>
-                <Plus size={14} /> New note
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Scrollable content ── */}
         <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
           {recent.length === 0 ? (
             <motion.div
@@ -127,7 +98,6 @@ export default function HomePage() {
             </div>
           )}
         </div>
-
       </div>
     </TooltipProvider>
   )
