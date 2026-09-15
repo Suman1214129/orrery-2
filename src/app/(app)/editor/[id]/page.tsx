@@ -243,7 +243,7 @@ export default function EditorPage() {
   useEffect(() => {
     setOpenTabIds((prev) => {
       if (prev.includes(noteId)) return prev
-      return [...prev, noteId].slice(-MAX_TABS)
+      return [...prev, noteId].slice(Math.max(0, prev.length + 1 - MAX_TABS))
     })
   }, [noteId])
 

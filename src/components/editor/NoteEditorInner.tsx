@@ -17,7 +17,6 @@ import { common, createLowlight } from 'lowlight'
 import { WikiLink, buildWikiLinkSuggestion } from './WikiLink'
 import { TagExtension, buildTagSuggestion } from './TagExtension'
 import { FloatingFormatMenu } from './FloatingFormatMenu'
-import { EditorToolbar } from './EditorToolbar'
 import { useNotesStore } from '@/store/notes'
 import { useSettingsStore } from '@/store/settings'
 import { matchesHotkey, cn } from '@/lib/utils'
@@ -108,7 +107,6 @@ export function NoteEditorInner({ noteId, content, onChange, fullWidth }: Props)
   return (
     <div className="flex flex-col h-full">
       <FloatingFormatMenu editor={editor} />
-      <EditorToolbar editor={editor} />
       <div className={cn('flex-1 overflow-y-auto px-8 py-6 mx-auto w-full', fullWidth ? 'max-w-full' : 'max-w-3xl')}>
         <EditorContent editor={editor} />
       </div>
