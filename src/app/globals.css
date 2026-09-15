@@ -13,17 +13,17 @@
   --olive-800: #33331a;
   --olive-900: #1a1a0d;
 
-  --bg:          #fafaf7;
-  --bg-subtle:   #f3f3ec;
-  --bg-muted:    #eaeae0;
+  --bg:          #f9f9f9;
+  --bg-subtle:   #f4f4f4;
+  --bg-muted:    #efefef;
   --surface:     #ffffff;
-  --surface-2:   #f7f7f0;
-  --border:      #e2e2d5;
-  --border-subtle: #ebebdf;
+  --surface-2:   #f7f7f7;
+  --border:      #e5e5e5;
+  --border-subtle: #ebebeb;
 
-  --text:        #1c1c14;
-  --text-muted:  #6b6b52;
-  --text-subtle: #9a9a78;
+  --text:        #1a1a1a;
+  --text-muted:  #666666;
+  --text-subtle: #999999;
 
   --accent:      var(--olive-500);
   --accent-hover: var(--olive-600);

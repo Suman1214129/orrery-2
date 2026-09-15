@@ -1,239 +1,247 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
-import { cn } from '@/lib/utils'
 
 interface Props { editor: Editor }
+interface Pos { top: number; left: number }
 
-interface Rect { top: number; left: number }
+// ── Tiny icon helpers ──────────────────────────────────────────────────────
+const Ic = ({ d, vb = '0 0 20 20' }: { d: string | string[]; vb?: string }) => (
+  <svg viewBox={vb} style={{ width: 15, height: 15, fill: 'currentColor', display: 'block', flexShrink: 0 }}>
+    {(Array.isArray(d) ? d : [d]).map((p, i) => <path key={i} d={p} />)}
+  </svg>
+)
 
-// Inline SVG icons matching Notion's exact paths from the reference
-function IconBold() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" style={{ width: '100%', height: '100%', display: 'block', fill: 'currentColor', flexShrink: 0 }}>
-      <path d="M6.428 3.95a.875.875 0 0 0-.875.875v10.35c0 .483.392.875.875.875h3.81c1.377 0 2.461-.298 3.203-.963.763-.682 1.006-1.607 1.006-2.5 0-1.199-.582-2.18-1.483-2.788.704-.64 1.007-1.494 1.007-2.386 0-2.145-2.08-3.463-4.086-3.463zm.875 6.925h3.359c1.303 0 2.035.805 2.035 1.713 0 .586-.153.954-.423 1.196-.29.26-.873.516-2.036.516H7.303zm2.165-1.75H7.303V5.7h2.582c1.452 0 2.336.9 2.336 1.713 0 .515-.172.89-.516 1.16-.373.294-1.057.55-2.237.552" />
-    </svg>
-  )
-}
-function IconItalic() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" style={{ width: '100%', height: '100%', display: 'block', fill: 'currentColor', flexShrink: 0 }}>
-      <path d="m10.541 5.45-2.374 9.1H6.4a.625.625 0 1 0 0 1.25h4.5a.625.625 0 1 0 0-1.25H9.46l2.374-9.1H13.6a.625.625 0 1 0 0-1.25H9.1a.625.625 0 1 0 0 1.25z" />
-    </svg>
-  )
-}
-function IconUnderline() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" style={{ width: '100%', height: '100%', display: 'block', fill: 'currentColor', flexShrink: 0 }}>
-      <path d="M15.4 5.45a.625.625 0 1 0 0-1.25h-2.7a.625.625 0 0 0 0 1.25h.725v5.54c0 1.743-1.434 3.335-3.425 3.335-1.235 0-2.07-.414-2.602-.996-.541-.594-.823-1.423-.823-2.339V5.45H7.3a.625.625 0 1 0 0-1.25H4.6a.625.625 0 1 0 0 1.25h.725v5.54c0 1.163.358 2.314 1.15 3.181.8.877 1.989 1.404 3.525 1.404 2.699 0 4.675-2.17 4.675-4.585V5.45zm1.525 12.2c0 .345-.28.625-.625.625H3.7a.625.625 0 1 1 0-1.25h12.6c.345 0 .625.28.625.625" />
-    </svg>
-  )
-}
-function IconStrike() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" style={{ width: '100%', height: '100%', display: 'block', fill: 'currentColor', flexShrink: 0 }}>
-      <path d="M10.065 9.373H16.3a.627.627 0 1 1 0 1.255h-3.233l.122.107c.723.665 1.038 1.505 1.038 2.456 0 1.024-.503 1.868-1.288 2.436-.772.56-1.81.85-2.939.85s-2.167-.29-2.94-.85c-.784-.568-1.288-1.412-1.288-2.436a.628.628 0 0 1 1.255 0c0 .571.268 1.057.77 1.42.513.37 1.276.611 2.203.611.928 0 1.69-.24 2.204-.612.5-.362.768-.848.768-1.42 0-.644-.199-1.133-.632-1.531-.452-.416-1.207-.777-2.405-1.032H3.7a.627.627 0 1 1 0-1.255h3.233l-.122-.107C6.088 8.6 5.773 7.76 5.773 6.81c0-1.024.503-1.868 1.288-2.436.772-.56 1.81-.85 2.94-.85s2.166.29 2.938.85c.785.568 1.289 1.412 1.289 2.436a.628.628 0 0 1-1.255 0c0-.571-.268-1.057-.77-1.42-.513-.37-1.275-.612-2.203-.612s-1.69.241-2.203.613c-.502.362-.77.848-.77 1.42 0 .644.2 1.133.633 1.531.452.416 1.207.777 2.405 1.032" />
-    </svg>
-  )
-}
-function IconCode() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" style={{ width: '100%', height: '100%', display: 'block', fill: 'currentColor', flexShrink: 0 }}>
-      <path d="M11.971 3.1c.332.094.525.44.43.772l-3.6 12.6a.625.625 0 0 1-1.202-.343l3.6-12.6a.625.625 0 0 1 .772-.43M5.417 5.598a.626.626 0 0 1 .885.884L2.784 10l3.518 3.519a.625.625 0 0 1-.885.883l-3.96-3.96a.626.626 0 0 1 0-.884zm8.281 0a.626.626 0 0 1 .884 0l3.96 3.96a.626.626 0 0 1 0 .884l-3.96 3.96a.626.626 0 0 1-.884-.883L17.215 10l-3.517-3.518a.626.626 0 0 1 0-.884" />
-    </svg>
-  )
-}
-function IconLink() {
-  return (
-    <svg aria-hidden="true" viewBox="2.5 0 14.92 20" style={{ width: '100%', height: '100%', display: 'block', fill: 'currentColor', flexShrink: 0 }}>
-      <path d="M10.61 3.61a3.776 3.776 0 0 1 5.34 0l.367.368a3.776 3.776 0 0 1 0 5.34l-1.852 1.853a.625.625 0 1 1-.884-.884l1.853-1.853a2.526 2.526 0 0 0 0-3.572l-.368-.367a2.526 2.526 0 0 0-3.572 0L9.641 6.347a.625.625 0 1 1-.883-.883z" />
-      <path d="M12.98 6.949a.625.625 0 0 1 0 .884L7.53 13.28a.625.625 0 0 1-.884-.884l5.448-5.448a.625.625 0 0 1 .884 0" />
-      <path d="M6.348 8.757a.625.625 0 0 1 0 .884l-1.853 1.853a2.526 2.526 0 0 0 0 3.572l.367.367a2.525 2.525 0 0 0 3.572 0l1.853-1.852a.625.625 0 1 1 .884.883l-1.853 1.853a3.776 3.776 0 0 1-5.34 0l-.367-.367a3.776 3.776 0 0 1 0-5.34l1.853-1.853a.625.625 0 0 1 .884 0" />
-    </svg>
-  )
-}
-function IconClearFormat() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" style={{ width: '100%', height: '100%', display: 'block', fill: 'currentColor', flexShrink: 0 }}>
-      <path d="M12.75 4.2c.345 0 .625.28.625.625v1.8a.625.625 0 0 1-1.25 0V5.45h-3.25v9.1h.726a.626.626 0 0 1 0 1.25H6.9a.625.625 0 1 1 0-1.25h.724v-9.1h-3.25v1.175a.625.625 0 0 1-1.25 0v-1.8c0-.345.28-.625.625-.625z" />
-      <path d="M16.176 9.558a.626.626 0 0 1 .884.884l-1.68 1.68 1.68 1.679a.625.625 0 0 1-.884.884l-1.68-1.68-1.679 1.68a.626.626 0 0 1-.884-.884l1.678-1.68-1.678-1.679a.626.626 0 0 1 .884-.884l1.68 1.678z" />
-    </svg>
-  )
+// ── Styles ─────────────────────────────────────────────────────────────────
+const menuStyle: React.CSSProperties = {
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 12,
+  boxShadow: '0 8px 30px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08)',
+  padding: '6px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 2,
+  minWidth: 200,
+  maxWidth: 240,
 }
 
-const DIVIDER = 'divider'
-
-type ActionItem = {
-  label: string
-  icon: React.ReactNode
-  active: (e: Editor) => boolean
-  run: (e: Editor) => void
-  pressed?: boolean
-} | typeof DIVIDER
-
-function getActions(editor: Editor): ActionItem[] {
-  return [
-    {
-      label: 'Bold',
-      icon: <IconBold />,
-      active: (e) => e.isActive('bold'),
-      run: (e) => e.chain().focus().toggleBold().run(),
-    },
-    {
-      label: 'Italic',
-      icon: <IconItalic />,
-      active: (e) => e.isActive('italic'),
-      run: (e) => e.chain().focus().toggleItalic().run(),
-    },
-    {
-      label: 'Underline',
-      icon: <IconUnderline />,
-      active: () => false,
-      run: () => {},
-    },
-    {
-      label: 'Strikethrough',
-      icon: <IconStrike />,
-      active: (e) => e.isActive('strike'),
-      run: (e) => e.chain().focus().toggleStrike().run(),
-    },
-    {
-      label: 'Inline code',
-      icon: <IconCode />,
-      active: (e) => e.isActive('code'),
-      run: (e) => e.chain().focus().toggleCode().run(),
-    },
-    DIVIDER,
-    {
-      label: 'Link',
-      icon: <IconLink />,
-      active: (e) => e.isActive('link'),
-      run: (e) => {
-        const url = prompt('URL:')
-        if (url) e.chain().focus().setLink({ href: url }).run()
-      },
-    },
-    {
-      label: 'Clear format',
-      icon: <IconClearFormat />,
-      active: () => false,
-      run: (e) => e.chain().focus().unsetAllMarks().run(),
-    },
-  ]
+const rowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 2,
+  flexWrap: 'wrap',
 }
 
+const divStyle: React.CSSProperties = {
+  height: 1,
+  background: 'var(--border)',
+  margin: '3px 4px',
+}
+
+function Btn({
+  label, active, onClick, children, wide,
+}: {
+  label: string; active?: boolean; onClick: () => void; children: React.ReactNode; wide?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      aria-pressed={active}
+      onMouseDown={(e) => { e.preventDefault(); onClick() }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: wide ? 'flex-start' : 'center',
+        gap: 6,
+        height: 28,
+        minWidth: wide ? '100%' : 30,
+        padding: wide ? '0 8px' : '0 6px',
+        borderRadius: 6,
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: 12,
+        fontWeight: active ? 600 : 400,
+        background: active ? 'var(--accent-light)' : 'transparent',
+        color: active ? 'var(--accent)' : 'var(--text)',
+        transition: 'background 80ms',
+        whiteSpace: 'nowrap',
+      }}
+      className="hover:bg-[var(--bg-muted)]"
+    >
+      {children}
+    </button>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '4px 8px 2px' }}>
+      {children}
+    </p>
+  )
+}
+
+// ── Link dialog ────────────────────────────────────────────────────────────
+function LinkInput({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+  const [url, setUrl] = useState(editor.getAttributes('link').href ?? '')
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => { ref.current?.focus() }, [])
+  function apply() {
+    if (url) editor.chain().focus().setLink({ href: url }).run()
+    else editor.chain().focus().unsetLink().run()
+    onClose()
+  }
+  return (
+    <div style={{ padding: '4px 4px 2px', display: 'flex', gap: 4 }}>
+      <input
+        ref={ref}
+        value={url}
+        onChange={e => setUrl(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') apply(); if (e.key === 'Escape') onClose() }}
+        placeholder="https://…"
+        style={{
+          flex: 1, height: 28, padding: '0 8px', fontSize: 12,
+          border: '1px solid var(--border)', borderRadius: 6,
+          background: 'var(--bg-muted)', color: 'var(--text)', outline: 'none',
+        }}
+      />
+      <button
+        onMouseDown={e => { e.preventDefault(); apply() }}
+        style={{ height: 28, padding: '0 10px', borderRadius: 6, border: 'none', background: 'var(--accent)', color: 'var(--accent-fg)', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+      >
+        Apply
+      </button>
+    </div>
+  )
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
 export function FloatingFormatMenu({ editor }: Props) {
-  const [pos, setPos] = useState<Rect | null>(null)
+  const [pos,       setPos]       = useState<Pos | null>(null)
+  const [linkMode,  setLinkMode]  = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function update() {
-      const { from, to, empty } = editor.state.selection
-      if (empty) { setPos(null); return }
-
+      const { empty } = editor.state.selection
+      if (empty) { setPos(null); setLinkMode(false); return }
       const sel = window.getSelection()
       if (!sel || sel.rangeCount === 0) { setPos(null); return }
-      const range = sel.getRangeAt(0)
-      const rect = range.getBoundingClientRect()
+      const rect = sel.getRangeAt(0).getBoundingClientRect()
       if (!rect.width) { setPos(null); return }
 
-      const menuH = 44
-      const menuW = menuRef.current?.offsetWidth ?? 260
-      let top = rect.top + window.scrollY - menuH - 8
-      let left = rect.left + window.scrollX + rect.width / 2 - menuW / 2
-
-      // Keep within viewport
-      if (top < window.scrollY + 8) top = rect.bottom + window.scrollY + 8
-      left = Math.max(8, Math.min(left, window.innerWidth - menuW - 8))
-
+      const mH = menuRef.current?.offsetHeight ?? 320
+      const mW = menuRef.current?.offsetWidth  ?? 220
+      let top  = rect.top  - mH - 10
+      let left = rect.left + rect.width / 2 - mW / 2
+      if (top < 8) top = rect.bottom + 10
+      left = Math.max(8, Math.min(left, window.innerWidth - mW - 8))
       setPos({ top, left })
     }
-
     editor.on('selectionUpdate', update)
-    editor.on('blur', () => setPos(null))
+    editor.on('blur', () => { setPos(null); setLinkMode(false) })
     return () => {
       editor.off('selectionUpdate', update)
-      editor.off('blur', () => setPos(null))
+      editor.off('blur', () => {})
     }
   }, [editor])
 
   if (!pos) return null
 
-  const actions = getActions(editor)
+  const e = editor
+  const isH = (l: 1|2|3|4) => e.isActive('heading', { level: l })
 
   return (
     <div
       ref={menuRef}
-      style={{
-        position: 'fixed',
-        top: pos.top,
-        left: pos.left,
-        zIndex: 9999,
-        pointerEvents: 'auto',
-        transformOrigin: 'center bottom',
-      }}
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={ev => ev.preventDefault()}
+      style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999, pointerEvents: 'auto' }}
     >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'stretch',
-          background: 'var(--surface)',
-          overflow: 'hidden',
-          fontSize: 14,
-          lineHeight: 1.2,
-          borderRadius: 14,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 1.5px 6px rgba(0,0,0,0.10)',
-          border: '1px solid var(--border)',
-          pointerEvents: 'auto',
-          padding: 8,
-          minWidth: 220,
-        }}
-      >
-        {/* Formatting row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          {actions.map((action, i) => {
-            if (action === DIVIDER) {
-              return (
-                <div
-                  key={`div-${i}`}
-                  style={{ width: 1, height: 20, background: 'var(--border)', marginInline: 2 }}
-                />
-              )
-            }
-            const isActive = action.active(editor)
-            return (
-              <button
-                key={action.label}
-                type="button"
-                aria-label={action.label}
-                aria-pressed={isActive}
-                onMouseDown={(e) => { e.preventDefault(); action.run(editor) }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 6,
-                  height: 28,
-                  width: 32,
-                  padding: 6,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: isActive ? 'var(--accent-light)' : 'transparent',
-                  color: isActive ? 'var(--accent)' : 'var(--text)',
-                  fill: isActive ? 'var(--accent)' : 'var(--text)',
-                  transition: 'background 100ms',
-                }}
-                className="hover:bg-[var(--bg-muted)]"
-              >
-                <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {action.icon}
-                </span>
-              </button>
-            )
-          })}
+      <div style={menuStyle}>
+
+        {/* ── Inline marks ── */}
+        <SectionLabel>Format</SectionLabel>
+        <div style={rowStyle}>
+          <Btn label="Bold"          active={e.isActive('bold')}   onClick={() => e.chain().focus().toggleBold().run()}>
+            <strong style={{ fontSize: 13 }}>B</strong>
+          </Btn>
+          <Btn label="Italic"        active={e.isActive('italic')} onClick={() => e.chain().focus().toggleItalic().run()}>
+            <em style={{ fontSize: 13 }}>I</em>
+          </Btn>
+          <Btn label="Strikethrough" active={e.isActive('strike')} onClick={() => e.chain().focus().toggleStrike().run()}>
+            <s style={{ fontSize: 12 }}>S</s>
+          </Btn>
+          <Btn label="Inline code"   active={e.isActive('code')}   onClick={() => e.chain().focus().toggleCode().run()}>
+            <Ic d="M11.971 3.1c.332.094.525.44.43.772l-3.6 12.6a.625.625 0 0 1-1.202-.343l3.6-12.6a.625.625 0 0 1 .772-.43M5.417 5.598a.626.626 0 0 1 .885.884L2.784 10l3.518 3.519a.625.625 0 0 1-.885.883l-3.96-3.96a.626.626 0 0 1 0-.884zm8.281 0a.626.626 0 0 1 .884 0l3.96 3.96a.626.626 0 0 1 0 .884l-3.96 3.96a.626.626 0 0 1-.884-.883L17.215 10l-3.517-3.518a.626.626 0 0 1 0-.884" />
+          </Btn>
+          <Btn label="Clear format"  active={false}                onClick={() => e.chain().focus().unsetAllMarks().run()}>
+            <Ic d={['M12.75 4.2c.345 0 .625.28.625.625v1.8a.625.625 0 0 1-1.25 0V5.45h-3.25v9.1h.726a.626.626 0 0 1 0 1.25H6.9a.625.625 0 1 1 0-1.25h.724v-9.1h-3.25v1.175a.625.625 0 0 1-1.25 0v-1.8c0-.345.28-.625.625-.625z', 'M16.176 9.558a.626.626 0 0 1 .884.884l-1.68 1.68 1.68 1.679a.625.625 0 0 1-.884.884l-1.68-1.68-1.679 1.68a.626.626 0 0 1-.884-.884l1.678-1.68-1.678-1.679a.626.626 0 0 1 .884-.884l1.68 1.678z']} />
+          </Btn>
         </div>
+
+        <div style={divStyle} />
+
+        {/* ── Headings ── */}
+        <SectionLabel>Headings</SectionLabel>
+        <div style={rowStyle}>
+          {([1,2,3,4] as const).map(l => (
+            <Btn key={l} label={`Heading ${l}`} active={isH(l)} onClick={() => e.chain().focus().toggleHeading({ level: l }).run()}>
+              <span style={{ fontSize: 11, fontWeight: 700 }}>H{l}</span>
+            </Btn>
+          ))}
+        </div>
+
+        <div style={divStyle} />
+
+        {/* ── Blocks ── */}
+        <SectionLabel>Blocks</SectionLabel>
+        <Btn label="Bullet list"   wide active={e.isActive('bulletList')}  onClick={() => e.chain().focus().toggleBulletList().run()}>
+          <Ic d="M4 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3-1.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM4 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3-1.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM4 16a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm3-1.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5z" vb="0 0 20 20" />
+          Bullet list
+        </Btn>
+        <Btn label="Numbered list" wide active={e.isActive('orderedList')} onClick={() => e.chain().focus().toggleOrderedList().run()}>
+          <Ic d="M3.5 4.5a.5.5 0 0 1 .5-.5h.5V3h-.5A1.5 1.5 0 0 0 2.5 4.5v.25h1zm0 .25H2.5V6h1zm3-1a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1zm0 5a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1zm0 5a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1zM2.5 9.5h1v1h-1zm0 1h1v.5a.5.5 0 0 1-.5.5H2.5zm1-2H2.5v.5a.5.5 0 0 0 .5.5h.5zm-1 6h1v1h-1zm1 1h-1v.5a.5.5 0 0 0 .5.5h.5zm-1-2h1v.5a.5.5 0 0 1-.5.5H2.5z" vb="0 0 20 20" />
+          Numbered list
+        </Btn>
+        <Btn label="To-do list"    wide active={e.isActive('taskList')}    onClick={() => e.chain().focus().toggleTaskList().run()}>
+          <Ic d="M7.5 4a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5zm-2 .5A2 2 0 0 1 7.5 2.5h9A2 2 0 0 1 18.5 4.5v11a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2zM5 7.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 3a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z" vb="0 0 20 20" />
+          To-do list
+        </Btn>
+        <Btn label="Blockquote"    wide active={e.isActive('blockquote')}  onClick={() => e.chain().focus().toggleBlockquote().run()}>
+          <Ic d="M6 5a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h1.5l-1 3H8l1.5-4.5V6a1 1 0 0 0-1-1zm7 0a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h1.5l-1 3H15l1.5-4.5V6a1 1 0 0 0-1-1z" vb="0 0 20 20" />
+          Quote
+        </Btn>
+        <Btn label="Code block"    wide active={e.isActive('codeBlock')}   onClick={() => e.chain().focus().toggleCodeBlock().run()}>
+          <Ic d="M11.971 3.1c.332.094.525.44.43.772l-3.6 12.6a.625.625 0 0 1-1.202-.343l3.6-12.6a.625.625 0 0 1 .772-.43M5.417 5.598a.626.626 0 0 1 .885.884L2.784 10l3.518 3.519a.625.625 0 0 1-.885.883l-3.96-3.96a.626.626 0 0 1 0-.884zm8.281 0a.626.626 0 0 1 .884 0l3.96 3.96a.626.626 0 0 1 0 .884l-3.96 3.96a.626.626 0 0 1-.884-.883L17.215 10l-3.517-3.518a.626.626 0 0 1 0-.884" />
+          Code block
+        </Btn>
+        <Btn label="Insert table"  wide active={false}                     onClick={() => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+          <Ic d="M3 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1zm2 1v3h4V5zm0 4v3h4V9zm0 4v3h4v-3zm5-8v3h5V5zm0 4v3h5V9zm0 4v3h5v-3z" vb="0 0 20 20" />
+          Table
+        </Btn>
+
+        <div style={divStyle} />
+
+        {/* ── Link ── */}
+        <SectionLabel>Link</SectionLabel>
+        {linkMode ? (
+          <LinkInput editor={editor} onClose={() => setLinkMode(false)} />
+        ) : (
+          <Btn label="Link" wide active={e.isActive('link')} onClick={() => setLinkMode(true)}>
+            <Ic d={['M10.61 3.61a3.776 3.776 0 0 1 5.34 0l.367.368a3.776 3.776 0 0 1 0 5.34l-1.852 1.853a.625.625 0 1 1-.884-.884l1.853-1.853a2.526 2.526 0 0 0 0-3.572l-.368-.367a2.526 2.526 0 0 0-3.572 0L9.641 6.347a.625.625 0 1 1-.883-.883z', 'M12.98 6.949a.625.625 0 0 1 0 .884L7.53 13.28a.625.625 0 0 1-.884-.884l5.448-5.448a.625.625 0 0 1 .884 0', 'M6.348 8.757a.625.625 0 0 1 0 .884l-1.853 1.853a2.526 2.526 0 0 0 0 3.572l.367.367a2.525 2.525 0 0 0 3.572 0l1.853-1.852a.625.625 0 1 1 .884.883l-1.853 1.853a3.776 3.776 0 0 1-5.34 0l-.367-.367a3.776 3.776 0 0 1 0-5.34l1.853-1.853a.625.625 0 0 1 .884 0']} vb="2.5 0 14.92 20" />
+            {e.isActive('link') ? 'Edit link' : 'Add link'}
+          </Btn>
+        )}
+        {e.isActive('link') && !linkMode && (
+          <Btn label="Remove link" wide active={false} onClick={() => e.chain().focus().unsetLink().run()}>
+            <Ic d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414z" vb="0 0 20 20" />
+            Remove link
+          </Btn>
+        )}
+
       </div>
     </div>
   )

@@ -139,15 +139,13 @@ export default function EditorPage() {
     <TooltipProvider>
       <div className="flex flex-col h-full overflow-hidden">
 
-        {/* ── Tab bar (Preline underline tabs) ── */}
-        <div className="border-b border-[var(--border)] bg-[var(--surface)] flex-shrink-0">
-          <div className="flex items-stretch">
-            {/* Tabs */}
+        {/* ── Tab bar ── */}
+        <div className="border-b border-[var(--border)] bg-[var(--bg)] flex-shrink-0">
+          <div className="flex items-stretch h-10">
             <nav
-              className="flex gap-x-0 overflow-x-auto flex-1 min-w-0 [&::-webkit-scrollbar]:hidden"
+              className="flex overflow-x-auto flex-1 min-w-0 [&::-webkit-scrollbar]:hidden"
               aria-label="Open notes"
               role="tablist"
-              aria-orientation="horizontal"
             >
               {tabNotes.map((t) => {
                 const isActive = t.id === noteId
@@ -159,116 +157,59 @@ export default function EditorPage() {
                     aria-selected={isActive}
                     onClick={() => router.push(`/editor/${t.id}`)}
                     className={cn(
-                      'group relative flex items-center gap-x-1.5 py-3 px-3 text-sm whitespace-nowrap',
-                      'after:absolute after:-bottom-px after:inset-x-0 after:h-0.5 after:bg-transparent',
+                      'group relative flex items-center gap-1.5 h-full px-3 text-sm whitespace-nowrap',
+                      'after:absolute after:bottom-0 after:inset-x-0 after:h-0.5 after:bg-transparent',
                       'focus:outline-none transition-colors',
                       isActive
-                        ? 'font-semibold text-[var(--accent)] after:bg-[var(--accent)]'
-                        : 'text-[var(--text-muted)] hover:text-[var(--accent)] focus:text-[var(--accent)]'
+                        ? 'text-[var(--text)] font-medium after:bg-[var(--accent)]'
+                        : 'text-[var(--text-subtle)] hover:text-[var(--text-muted)]'
                     )}
                   >
-                    <span className="max-w-[120px] truncate">{t.title || 'Untitled'}</span>
+                    <span className="max-w-[140px] truncate">{t.title || 'Untitled'}</span>
                     <span
                       role="button"
                       tabIndex={0}
                       onClick={(e) => closeTab(t.id, e)}
                       onKeyDown={(e) => e.key === 'Enter' && closeTab(t.id, e as unknown as React.MouseEvent)}
-                      className={cn(
-                        'flex items-center justify-center size-4 rounded-sm transition-colors',
-                        'opacity-0 group-hover:opacity-100',
-                        isActive && 'opacity-60',
-                        'hover:bg-[var(--bg-muted)] hover:opacity-100 text-[var(--text-muted)]'
-                      )}
+                      className="flex items-center justify-center size-4 rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-[var(--bg-muted)] text-[var(--text-muted)] transition-opacity"
                     >
                       <X size={10} />
                     </span>
                   </button>
                 )
               })}
-            </nav>
-
-            {/* Right controls */}
-            <div className="flex items-center gap-1 px-2 shrink-0 border-l border-[var(--border)]">
-              {/* New tab */}
+              {/* Inline + new tab button */}
               <Tooltip content="New note">
                 <button
                   type="button"
                   onClick={handleNewTab}
-                  className="flex items-center justify-center size-7 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none"
+                  className="flex items-center justify-center h-full px-2.5 text-[var(--text-subtle)] hover:text-[var(--text-muted)] transition-colors focus:outline-none"
                   aria-label="New note"
                 >
                   <Plus size={14} />
                 </button>
               </Tooltip>
+            </nav>
 
-              {/* Checkpoint */}
+            {/* Right controls */}
+            <div className="flex items-center gap-1 px-2 shrink-0">
               {view === 'editor' && (
                 <Tooltip content="Add checkpoint">
-                  <button
-                    type="button"
-                    onClick={addCheckpoint}
-                    className="flex items-center justify-center size-7 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none"
-                    aria-label="Add checkpoint"
-                  >
+                  <button type="button" onClick={addCheckpoint} className="flex items-center justify-center size-7 rounded-md text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none">
                     <CheckSquare size={14} />
                   </button>
                 </Tooltip>
               )}
-
-              {/* AI panel */}
               <Tooltip content={aiPanelOpen ? 'Close AI panel' : 'Open AI panel'}>
                 <button
                   type="button"
                   onClick={() => setAiPanelOpen(!aiPanelOpen)}
                   className={cn(
                     'flex items-center justify-center size-7 rounded-md transition-colors focus:outline-none',
-                    aiPanelOpen
-                      ? 'bg-[var(--accent)] text-[var(--accent-fg)]'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)]'
+                    aiPanelOpen ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : 'text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)]'
                   )}
-                  aria-label="Toggle AI panel"
                 >
                   <Sparkles size={14} />
-                </button>
-              </Tooltip>
-            </div>
-          </div>
-
-          {/* Title input row */}
-          <div className="flex items-center gap-2 px-4 py-1.5 border-t border-[var(--border)]">
-            <input
-              value={title}
-              onChange={handleTitleChange}
-              placeholder="Untitled"
-              className="flex-1 bg-transparent text-sm font-semibold text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none min-w-0"
-            />
-            {/* View toggle */}
-            <div className="flex items-center rounded-md border border-[var(--border)] overflow-hidden shrink-0">
-              <Tooltip content={`Editor (${hotkeys.toggleCanvas})`}>
-                <button
-                  onClick={() => setView('editor')}
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors',
-                    view === 'editor'
-                      ? 'bg-[var(--accent-light)] text-[var(--accent)]'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-muted)]'
-                  )}
-                >
-                  <Edit3 size={11} /> Editor
-                </button>
-              </Tooltip>
-              <div className="w-px h-4 bg-[var(--border)]" />
-              <Tooltip content={`Canvas (${hotkeys.toggleCanvas})`}>
-                <button
-                  onClick={() => setView('canvas')}
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors',
-                    view === 'canvas'
-                      ? 'bg-[var(--accent-light)] text-[var(--accent)]'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-muted)]'
-                  )}
-                >
-                  <Eye size={11} /> Canvas
                 </button>
               </Tooltip>
             </div>
