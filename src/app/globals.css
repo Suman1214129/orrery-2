@@ -15,10 +15,10 @@
 
   --bg:          #f9f9f9;
   --bg-subtle:   #f4f4f4;
-  --bg-muted:    #efefef;
+  --bg-muted:    #eeeeee;
   --surface:     #ffffff;
   --surface-2:   #f7f7f7;
-  --border:      #e5e5e5;
+  --border:      #e4e4e4;
   --border-subtle: #ebebeb;
 
   --text:        #1a1a1a;
@@ -42,22 +42,22 @@
 }
 
 [data-theme="dark"] {
-  --bg:          #141410;
-  --bg-subtle:   #1c1c16;
-  --bg-muted:    #242418;
-  --surface:     #1e1e18;
-  --surface-2:   #28281e;
-  --border:      #2e2e22;
-  --border-subtle: #262620;
+  --bg:          #141414;
+  --bg-subtle:   #1c1c1c;
+  --bg-muted:    #242424;
+  --surface:     #1e1e1e;
+  --surface-2:   #282828;
+  --border:      #2e2e2e;
+  --border-subtle: #262626;
 
-  --text:        #f0f0e8;
-  --text-muted:  #a0a080;
-  --text-subtle: #6a6a50;
+  --text:        #f0f0f0;
+  --text-muted:  #a0a0a0;
+  --text-subtle: #6a6a6a;
 
   --accent:      var(--olive-400);
   --accent-hover: var(--olive-300);
-  --accent-light: #2a2a18;
-  --accent-fg:   #0a0a06;
+  --accent-light: #2a2a1a;
+  --accent-fg:   #ffffff;
 }
 
 @theme inline {
@@ -120,33 +120,41 @@ body {
 
 .tiptap-editor code {
   font-family: var(--font-mono);
-  font-size: 0.875em;
-  background: var(--bg-muted);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.1em 0.35em;
-  color: var(--olive-600);
+  font-size: 0.85em;
+  background: #f0f0f0;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+  color: #c7254e;
 }
-[data-theme="dark"] .tiptap-editor code { color: var(--olive-300); }
+[data-theme="dark"] .tiptap-editor code {
+  background: #2a2a2a;
+  border-color: #3a3a3a;
+  color: #e06c75;
+}
 
 .tiptap-editor pre {
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
+  background: #1e1e1e;
+  border: 1px solid #333;
   border-radius: var(--radius);
   padding: 1em 1.25em;
   overflow-x: auto;
   font-family: var(--font-mono);
   font-size: 0.875em;
-  line-height: 1.6;
+  line-height: 1.65;
+  color: #d4d4d4;
 }
-.tiptap-editor pre code { background: none; border: none; padding: 0; color: inherit; }
+.tiptap-editor pre code { background: none; border: none; padding: 0; color: inherit; font-size: 1em; }
+[data-theme="dark"] .tiptap-editor pre { background: #111; border-color: #2a2a2a; }
 
 .tiptap-editor blockquote {
-  border-left: 3px solid var(--accent);
-  padding-left: 1em;
+  border-left: 3px solid var(--border);
+  padding: 0.25em 0 0.25em 1em;
   color: var(--text-muted);
-  font-style: italic;
+  font-style: normal;
   margin: 1em 0;
+  background: var(--bg-subtle);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .tiptap-editor ul { list-style: disc; padding-left: 1.5em; }
@@ -194,11 +202,38 @@ body {
   border: 1px solid var(--border);
 }
 
-/* Tables */
+/* ── Code block language label ── */
+.tiptap-editor pre[data-language]::before {
+  content: attr(data-language);
+  display: block;
+  font-size: 0.7em;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.6em;
+  font-family: var(--font-mono);
+}
+
+/* ── Callout / info block ── */
+.tiptap-editor .callout {
+  display: flex;
+  gap: 0.75em;
+  padding: 0.875em 1em;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  margin: 1em 0;
+  font-size: 0.9375em;
+}
+
+/* ── Table polish ── */
 .tiptap-editor table {
   border-collapse: collapse;
   width: 100%;
   font-size: 0.9em;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
 }
 .tiptap-editor th, .tiptap-editor td {
   border: 1px solid var(--border);
@@ -208,6 +243,10 @@ body {
 .tiptap-editor th {
   background: var(--bg-subtle);
   font-weight: 600;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
 }
 .tiptap-editor tr:nth-child(even) td { background: var(--bg-subtle); }
 
@@ -261,8 +300,8 @@ body {
 }
 .suggestion-item:hover,
 .suggestion-item.is-selected {
-  background: var(--accent-light);
-  color: var(--accent);
+  background: var(--bg-muted);
+  color: var(--text);
 }
 
 /* React Flow canvas */
@@ -275,13 +314,13 @@ body {
 .react-flow__controls button:hover { background: var(--bg-muted); }
 .react-flow__minimap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
 
-/* Syntax highlighting (lowlight) */
-.hljs-comment, .hljs-quote { color: var(--text-subtle); font-style: italic; }
-.hljs-keyword, .hljs-selector-tag { color: #7a7a30; font-weight: 600; }
-.hljs-string, .hljs-attr { color: #5a7a30; }
-.hljs-number, .hljs-literal { color: #7a5a30; }
-.hljs-built_in, .hljs-type { color: #507a60; }
-.hljs-title, .hljs-function { color: #3a6a7a; }
-[data-theme="dark"] .hljs-keyword { color: var(--olive-300); }
-[data-theme="dark"] .hljs-string { color: #8ab870; }
-[data-theme="dark"] .hljs-number { color: #c8a060; }
+/* Syntax highlighting (lowlight) — VS Code Dark+ palette */
+.hljs-comment, .hljs-quote { color: #6a9955; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag { color: #569cd6; font-weight: 600; }
+.hljs-string, .hljs-attr { color: #ce9178; }
+.hljs-number, .hljs-literal { color: #b5cea8; }
+.hljs-built_in, .hljs-type { color: #4ec9b0; }
+.hljs-title, .hljs-function { color: #dcdcaa; }
+.hljs-variable, .hljs-params { color: #9cdcfe; }
+.hljs-operator { color: #d4d4d4; }
+.hljs-punctuation { color: #d4d4d4; }
