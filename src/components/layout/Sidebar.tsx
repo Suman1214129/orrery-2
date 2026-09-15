@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Search, Plus, Settings, FileText, Tag, Folder, Archive, Trash2, Moon, Sun } from 'lucide-react'
 import * as Avatar from '@radix-ui/react-avatar'
@@ -7,6 +7,7 @@ import { useNotesStore } from '@/store/notes'
 import { useAuthStore } from '@/store/auth'
 import { useSettingsStore } from '@/store/settings'
 import { Tooltip, TooltipProvider } from '@/components/ui/Tooltip'
+import { SearchModal } from './SearchModal'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -29,8 +30,6 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [minified,   setMinified]   = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const [searchVal,  setSearchVal]  = useState('')
-  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     function handler() { setMobileOpen(true) }
@@ -39,7 +38,7 @@ export function Sidebar() {
   }, [])
 
   useEffect(() => {
-    function handler() { setSearchOpen(true); setTimeout(() => searchRef.current?.focus(), 50) }
+    function handler() { setSearchOpen(true) }
     document.addEventListener('orrery:open-search', handler)
     return () => document.removeEventListener('orrery:open-search', handler)
   }, [])
@@ -69,6 +68,9 @@ export function Sidebar() {
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 bg-black/40" onClick={() => setMobileOpen(false)} aria-hidden="true" />
       )}
+
+      {/* Search modal — full-screen overlay, outside sidebar DOM */}
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Sidebar panel */}
       <div
@@ -139,13 +141,13 @@ export function Sidebar() {
               </button>
             </div>
 
-            {/* Desktop: minify toggle */}
+            {/* Desktop controls */}
             <div className="hidden lg:flex items-center gap-0.5">
               {/* Search */}
               <Tooltip content="Search (Ctrl+K)">
                 <button
                   type="button"
-                  onClick={() => { if (minified) setMinified(false); setSearchOpen(true); setTimeout(() => searchRef.current?.focus(), 80) }}
+                  onClick={() => setSearchOpen(true)}
                   className="flex justify-center items-center flex-none size-9 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-muted)] rounded-full disabled:opacity-50 focus:outline-none focus:bg-[var(--bg-muted)]"
                   aria-label="Search"
                 >
@@ -167,7 +169,7 @@ export function Sidebar() {
                 </Tooltip>
               )}
 
-              {/* Minify toggle — Preline inline SVG pair */}
+              {/* Minify toggle */}
               <Tooltip content={minified ? 'Expand sidebar' : 'Collapse sidebar'}>
                 <button
                   type="button"
@@ -175,14 +177,11 @@ export function Sidebar() {
                   className="flex justify-center items-center flex-none gap-x-3 size-9 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-muted)] rounded-full disabled:opacity-50 focus:outline-none focus:bg-[var(--bg-muted)]"
                   aria-label="Toggle navigation"
                 >
-                  {/* icon shown when minified (expand) */}
-                  {minified && (
+                  {minified ? (
                     <svg className="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/><path d="m8 9 3 3-3 3"/>
                     </svg>
-                  )}
-                  {/* icon shown when expanded (collapse) */}
-                  {!minified && (
+                  ) : (
                     <svg className="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/><path d="m10 15-3-3 3-3"/>
                     </svg>
@@ -192,23 +191,6 @@ export function Sidebar() {
               </Tooltip>
             </div>
           </header>
-
-          {/* Search bar */}
-          {searchOpen && (
-            <div className={cn('px-2 pb-2', minified && 'lg:hidden')}>
-              <div className="relative">
-                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
-                <input
-                  ref={searchRef}
-                  value={searchVal}
-                  onChange={(e) => setSearchVal(e.target.value)}
-                  onBlur={() => { if (!searchVal) setSearchOpen(false) }}
-                  placeholder="Search notes…"
-                  className="w-full h-8 pl-7 pr-2 text-sm rounded-lg bg-[var(--bg-muted)] border border-[var(--border)] text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                />
-              </div>
-            </div>
-          )}
 
           {/* Nav body */}
           <nav
