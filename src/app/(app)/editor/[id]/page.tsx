@@ -2,7 +2,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GitBranch, Edit3, Plus, X, ChevronRight, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare, BookOpen, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { GitBranch, Edit3, Plus, X, ChevronLeft, ChevronRight, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare, BookOpen, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useEditorStore } from '@/store/editor'
 import { useAuthStore } from '@/store/auth'
@@ -186,7 +186,6 @@ export default function EditorPage() {
   const [locked, setLocked] = useState(false)
   const [readingMode, setReadingMode] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [mainSidebarOpen, setMainSidebarOpen] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuBtnRef = useRef<HTMLDivElement>(null)
 
@@ -199,15 +198,6 @@ export default function EditorPage() {
 
   useEffect(() => { if (user && notes.length === 0) loadNotes(user.id) }, [user]) // eslint-disable-line
   useEffect(() => { if (noteId) loadCheckpoints(noteId) }, [noteId, loadCheckpoints])
-
-  useEffect(() => {
-    function setMainSidebar(event: Event) {
-      const open = (event as CustomEvent<{ open: boolean }>).detail?.open
-      if (typeof open === 'boolean') setMainSidebarOpen(open)
-    }
-    document.addEventListener('orrery:set-main-sidebar', setMainSidebar)
-    return () => document.removeEventListener('orrery:set-main-sidebar', setMainSidebar)
-  }, [])
 
   const handleContentChange = useCallback((html: string) => {
     if (locked) return
@@ -307,7 +297,7 @@ export default function EditorPage() {
 
         {/* LEFT panel — collapsible */}
         <AnimatePresence mode="wait" initial={false}>
-          {view === 'editor' && !mainSidebarOpen && (
+          {view === 'editor' && (
             <motion.div key="doc-panel"
               initial={{ width: 0, opacity: 0 }} animate={{ width: sidebarCollapsed ? 28 : 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -324,7 +314,11 @@ export default function EditorPage() {
                 </div>
               ) : (
                 <>
-                  <div className="h-11 flex items-center justify-end px-3 shrink-0 border-b border-[var(--border)] gap-2">
+                  <div className="h-11 flex items-center px-3 shrink-0 border-b border-[var(--border)] gap-2">
+                    <button onClick={() => router.push('/home')}
+                      className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors focus:outline-none flex-1">
+                      <ChevronLeft size={14} /> All docs
+                    </button>
                     <Tooltip content="Collapse sidebar">
                       <button onClick={() => setSidebarCollapsed(true)}
                         className="flex items-center justify-center size-6 rounded text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none shrink-0">
@@ -339,7 +333,7 @@ export default function EditorPage() {
               )}
             </motion.div>
           )}
-          {view !== 'editor' && !mainSidebarOpen && (
+          {view !== 'editor' && (
             <motion.div key="ai-panel"
               initial={{ width: 0, opacity: 0 }} animate={{ width: sidebarCollapsed ? 28 : 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -355,7 +349,11 @@ export default function EditorPage() {
                 </div>
               ) : (
                 <>
-                  <div className="h-11 flex items-center justify-end px-3 shrink-0 border-b border-[var(--border)] gap-2">
+                  <div className="h-11 flex items-center px-3 shrink-0 border-b border-[var(--border)] gap-2">
+                    <button onClick={() => router.push('/home')}
+                      className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors focus:outline-none flex-1">
+                      <ChevronLeft size={14} /> All docs
+                    </button>
                     <Tooltip content="Collapse sidebar">
                       <button onClick={() => setSidebarCollapsed(true)}
                         className="flex items-center justify-center size-6 rounded text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none shrink-0">
