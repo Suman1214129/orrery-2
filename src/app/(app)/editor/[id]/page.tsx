@@ -12,9 +12,10 @@ import { useAuthStore } from '@/store/auth'
 import { useSettingsStore } from '@/store/settings'
 import { Button } from '@/components/ui/Button'
 import { Tooltip, TooltipProvider } from '@/components/ui/Tooltip'
+import dynamic from 'next/dynamic'
 import { NoteEditor } from '@/components/editor/NoteEditor'
-import { CheckpointCanvas } from '@/components/canvas/CheckpointCanvas'
-import { AISidebar } from '@/components/editor/AISidebar'
+const CheckpointCanvas = dynamic(() => import('@/components/canvas/CheckpointCanvas').then(m => ({ default: m.CheckpointCanvas })), { ssr: false })
+const AISidebar = dynamic(() => import('@/components/editor/AISidebar').then(m => ({ default: m.AISidebar })), { ssr: false })
 import { matchesHotkey } from '@/lib/utils'
 
 export default function EditorPage() {

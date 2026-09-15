@@ -65,6 +65,8 @@
   --color-foreground: var(--text);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), 'Fira Code', monospace;
+  --width-13: 3.25rem; /* 52px — Preline minified sidebar */
+  --z-index-60: 60;
 }
 
 *, *::before, *::after { box-sizing: border-box; }

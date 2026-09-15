@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Sparkles, Loader2, GitBranch, Check, X, RotateCcw } from 'lucide-react'
+import { Sparkles, Loader2, GitBranch, Check, X } from 'lucide-react'
 import { useEditorStore } from '@/store/editor'
 import { useSettingsStore } from '@/store/settings'
 import { useAuthStore } from '@/store/auth'
@@ -251,41 +251,100 @@ export function AISidebar({ noteId, noteContent }: Props) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* Input — Gray Toolbar Textarea */}
       <div className="p-3 border-t border-[var(--border)]">
-        <form onSubmit={sendMessage} className="flex flex-col gap-2">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
-            }}
-            placeholder={selectedCheckpointId ? 'Ask or describe a fork…' : 'Ask about this note…'}
-            rows={2}
-            className="w-full resize-none text-xs rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-          />
-          <div className="flex gap-1.5">
-            <Button
-              type="submit"
-              size="sm"
-              variant="ghost"
-              className="flex-1"
-              disabled={!input.trim() || aiLoading}
-            >
-              <Send size={12} /> Ask
-            </Button>
-            {selectedCheckpointId && (
-              <Button
-                type="button"
-                size="sm"
-                className="flex-1"
-                disabled={!input.trim() || aiLoading}
-                onClick={generateBranch}
-              >
-                <GitBranch size={12} /> Fork
-              </Button>
-            )}
+        <form onSubmit={sendMessage}>
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
+              }}
+              placeholder="Ask me anything..."
+              rows={3}
+              className="p-3 sm:p-4 pb-12 sm:pb-12 block w-full resize-none bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] text-sm text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-colors"
+            />
+
+            {/* Toolbar — overlaid on textarea's bottom padding */}
+            <div className="absolute bottom-px inset-x-px p-2 rounded-b-[var(--radius-lg)] bg-[var(--surface)] flex flex-wrap justify-between items-center gap-2">
+
+              {/* Left group: stop + attach */}
+              <div className="flex items-center gap-1">
+                {/* Stop / square icon */}
+                <button
+                  type="button"
+                  onClick={clearAiMessages}
+                  disabled={aiLoading}
+                  aria-label="Clear conversation"
+                  className="size-8 inline-flex items-center justify-center rounded-[var(--radius)] text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] focus:outline-none focus:bg-[var(--bg-muted)] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0">
+                    <rect width="14" height="14" x="5" y="5" rx="2"/>
+                  </svg>
+                </button>
+
+                {/* Paperclip / attach */}
+                <button
+                  type="button"
+                  aria-label="Attach file"
+                  className="size-8 inline-flex items-center justify-center rounded-[var(--radius)] text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] focus:outline-none focus:bg-[var(--bg-muted)] transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0">
+                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Right group: mic + send */}
+              <div className="flex items-center gap-1">
+                {/* Fork button (replaces mic when checkpoint selected) */}
+                {selectedCheckpointId ? (
+                  <button
+                    type="button"
+                    onClick={generateBranch}
+                    disabled={!input.trim() || aiLoading}
+                    aria-label="Fork branch"
+                    className="size-8 inline-flex items-center justify-center rounded-[var(--radius)] text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] focus:outline-none focus:bg-[var(--bg-muted)] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                  >
+                    <GitBranch className="size-4 shrink-0" />
+                  </button>
+                ) : (
+                  /* Microphone */
+                  <button
+                    type="button"
+                    aria-label="Voice input"
+                    className="size-8 inline-flex items-center justify-center rounded-[var(--radius)] text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] focus:outline-none focus:bg-[var(--bg-muted)] transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0">
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                      <line x1="12" x2="12" y1="19" y2="22"/>
+                    </svg>
+                  </button>
+                )}
+
+                {/* Send — filled primary button */}
+                <button
+                  type="submit"
+                  disabled={!input.trim() || aiLoading}
+                  aria-label="Send message"
+                  className="size-8 inline-flex items-center justify-center rounded-[var(--radius)] bg-[var(--accent)] border border-[var(--accent-hover)] text-[var(--accent-fg)] hover:bg-[var(--accent-hover)] focus:outline-none focus:bg-[var(--accent-hover)] disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                >
+                  {aiLoading
+                    ? <Loader2 className="size-3.5 shrink-0 animate-spin" />
+                    : (
+                      /* Filled paper-plane on 16 viewBox, size-3.5 */
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="size-3.5 shrink-0">
+                        <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L2.033 6.849l4.338 2.761z"/>
+                      </svg>
+                    )
+                  }
+                </button>
+              </div>
+
+            </div>
           </div>
         </form>
       </div>

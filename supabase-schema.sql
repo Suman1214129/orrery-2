@@ -20,7 +20,8 @@ create policy "Users manage own folders" on folders
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- ── Notes ────────────────────────────────────────────────────
+-- ── Notes ─────────────────https://wwvsqudgvezrucmcamdw.supabase.co/auth/v1/callback
+───────────────────────────────────
 create table if not exists notes (
   id          uuid primary key default uuid_generate_v4(),
   user_id     uuid not null references auth.users(id) on delete cascade,

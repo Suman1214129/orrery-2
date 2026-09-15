@@ -1,17 +1,17 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Plus, FileText, PanelLeftOpen, Clock } from 'lucide-react'
+import { Plus, FileText, Clock, ChevronRight } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useAuthStore } from '@/store/auth'
 import { Button } from '@/components/ui/Button'
-import { Tooltip, TooltipProvider } from '@/components/ui/Tooltip'
+import { TooltipProvider } from '@/components/ui/Tooltip'
 import { cn, formatDate } from '@/lib/utils'
 
 export default function HomePage() {
   const router = useRouter()
   const { user } = useAuthStore()
-  const { notes, sidebarOpen, setSidebarOpen, createNote } = useNotesStore()
+  const { notes, createNote } = useNotesStore()
 
   async function handleNewNote() {
     if (!user) return
@@ -24,25 +24,36 @@ export default function HomePage() {
   return (
     <TooltipProvider>
       <div className="flex flex-col h-full overflow-hidden">
-        {/* Topbar */}
-        <div className="flex items-center gap-3 px-6 py-3 border-b border-[var(--border)] bg-[var(--surface)]">
-          {!sidebarOpen && (
-            <Tooltip content="Open sidebar">
-              <Button variant="ghost" size="icon-sm" onClick={() => setSidebarOpen(true)}>
-                <PanelLeftOpen size={15} />
+
+        {/* ── Inner toolbar (shrink-0) — mirrors Preline template-preview-toolbar ── */}
+        <div className="shrink-0 px-3 pt-2 pb-1.5 sm:px-4 border-b border-[var(--border)]">
+          <div className="flex items-center gap-1.5 md:gap-3">
+
+            {/* Title + breadcrumb path */}
+            <div className="min-w-0 flex flex-col justify-center flex-1">
+              <div className="flex items-center gap-x-1.5 min-w-0">
+                <h1 className="truncate text-base font-semibold text-[var(--text)]">Orrery</h1>
+                <span className="text-[var(--text-subtle)]">&middot;</span>
+                <p className="block truncate text-sm text-[var(--text-muted)]">Home</p>
+              </div>
+              <nav className="flex items-center gap-x-1 text-xs text-[var(--text-subtle)]">
+                <span className="truncate font-medium text-[var(--text-muted)]">Notes</span>
+                <ChevronRight className="shrink-0 size-3 text-[var(--border)]" />
+                <span className="truncate font-medium text-[var(--text)]">Recent</span>
+              </nav>
+            </div>
+
+            {/* Right controls */}
+            <div className="flex items-center gap-1 shrink-0">
+              <Button size="sm" onClick={handleNewNote}>
+                <Plus size={14} /> New note
               </Button>
-            </Tooltip>
-          )}
-          <h1 className="text-sm font-semibold text-[var(--text)]">Home</h1>
-          <div className="ml-auto">
-            <Button size="sm" onClick={handleNewNote}>
-              <Plus size={14} /> New note
-            </Button>
+            </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        {/* ── Scrollable content ── */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
           {recent.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -61,7 +72,7 @@ export default function HomePage() {
               <div>
                 <p className="text-base font-medium text-[var(--text)]">Start writing</p>
                 <p className="text-sm text-[var(--text-muted)] mt-1 max-w-xs">
-                  Create a note, write freely, and branch off alternate paths whenever you wonder "what if."
+                  Create a note, write freely, and branch off alternate paths whenever you wonder &ldquo;what if.&rdquo;
                 </p>
               </div>
               <Button onClick={handleNewNote}>
@@ -96,7 +107,7 @@ export default function HomePage() {
                     whileTap={{ scale: 0.99 }}
                     onClick={() => router.push(`/editor/${note.id}`)}
                     className={cn(
-                      'h-36 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 text-left',
+                      'h-36 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg)] p-4 text-left',
                       'flex flex-col gap-2 hover:border-[var(--accent)] hover:shadow-[var(--shadow-md)] transition-all'
                     )}
                   >
@@ -116,6 +127,7 @@ export default function HomePage() {
             </div>
           )}
         </div>
+
       </div>
     </TooltipProvider>
   )
