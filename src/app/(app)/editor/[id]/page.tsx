@@ -17,6 +17,19 @@ const CheckpointCanvas = dynamic(() => import('@/components/canvas/CheckpointCan
 const AISidebar = dynamic(() => import('@/components/editor/AISidebar').then(m => ({ default: m.AISidebar })), { ssr: false })
 
 const MAX_TABS = 8
+const EDITOR_TABS_STORAGE_KEY = 'orrery:editor-tabs'
+
+function readStoredTabIds(noteId: string) {
+  if (typeof window === 'undefined') return [noteId]
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(EDITOR_TABS_STORAGE_KEY) ?? '[]')
+    if (Array.isArray(stored)) {
+      const ids = stored.filter((id): id is string => typeof id === 'string')
+      return ids.includes(noteId) ? ids.slice(-MAX_TABS) : [...ids, noteId].slice(-MAX_TABS)
+    }
+  } catch {}
+  return [noteId]
+}
 
 // ── Doc context menu ──────────────────────────────────────────────────────
 interface MenuAction {
@@ -228,7 +241,7 @@ export default function EditorPage() {
   } = useEditorStore()
 
   const note = notes.find((n) => n.id === noteId)
-  const [openTabIds, setOpenTabIds] = useState<string[]>(() => [noteId])
+  const [openTabIds, setOpenTabIds] = useState<string[]>(() => readStoredTabIds(noteId))
   const [menuOpen, setMenuOpen] = useState(false)
   const [showMoveTo, setShowMoveTo] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -247,6 +260,10 @@ export default function EditorPage() {
     })
   }, [noteId])
 
+  useEffect(() => {
+    sessionStorage.setItem(EDITOR_TABS_STORAGE_KEY, JSON.stringify(openTabIds))
+  }, [openTabIds])
+
   useEffect(() => { if (user && notes.length === 0) loadNotes(user.id) }, [user]) // eslint-disable-line
   useEffect(() => { if (noteId) loadCheckpoints(noteId) }, [noteId, loadCheckpoints])
 
@@ -259,11 +276,17 @@ export default function EditorPage() {
   async function handleNewDocument() {
     if (!user) return
     const n = await createNote(user.id)
+    const next = [...openTabIds, n.id].slice(-MAX_TABS)
+    setOpenTabIds(next)
+    sessionStorage.setItem(EDITOR_TABS_STORAGE_KEY, JSON.stringify(next))
     setShowDocumentPicker(false)
     router.push(`/editor/${n.id}`)
   }
 
   function openDocument(id: string) {
+    const next = openTabIds.includes(id) ? openTabIds : [...openTabIds, id].slice(-MAX_TABS)
+    setOpenTabIds(next)
+    sessionStorage.setItem(EDITOR_TABS_STORAGE_KEY, JSON.stringify(next))
     setShowDocumentPicker(false)
     router.push(`/editor/${id}`)
   }
@@ -272,6 +295,7 @@ export default function EditorPage() {
     e.stopPropagation()
     const next = openTabIds.filter(t => t !== id)
     setOpenTabIds(next)
+    sessionStorage.setItem(EDITOR_TABS_STORAGE_KEY, JSON.stringify(next))
     if (id === noteId) router.push(next.length > 0 ? `/editor/${next[next.length - 1]}` : '/home')
   }
 
