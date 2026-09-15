@@ -2,7 +2,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GitBranch, Edit3, Plus, X, ChevronLeft, ChevronRight, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare, BookOpen, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { GitBranch, Edit3, Plus, X, ChevronLeft, ChevronRight, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare, BookOpen, PanelLeftClose, PanelLeftOpen, Search, FilePlus } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useEditorStore } from '@/store/editor'
 import { useAuthStore } from '@/store/auth'
@@ -70,6 +70,56 @@ function DocMenu({ actions, onClose }: { actions: MenuAction[]; onClose: () => v
         </div>
       ))}
     </motion.div>
+  )
+}
+
+function DocumentPicker({ onClose, onOpen, onCreate }: { onClose: () => void; onOpen: (id: string) => void; onCreate: () => void }) {
+  const { notes } = useNotesStore()
+  const [query, setQuery] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  const filteredNotes = notes
+    .filter(note => !query.trim() || note.title.toLowerCase().includes(query.toLowerCase()) || note.content.replace(/<[^>]+>/g, ' ').toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 backdrop-blur-[2px] px-4 pt-20 sm:pt-28">
+      <motion.div ref={ref} initial={{ opacity: 0, scale: 0.97, y: -6 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: -6 }}
+        className="w-full max-w-lg overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
+        <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
+          <Search size={15} className="shrink-0 text-[var(--text-subtle)]" />
+          <input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Open a document…"
+            className="min-w-0 flex-1 bg-transparent text-sm text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none" />
+          <button type="button" onClick={onClose} aria-label="Close document picker" className="flex size-6 items-center justify-center rounded text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)]">
+            <X size={14} />
+          </button>
+        </div>
+        <div className="max-h-80 overflow-y-auto p-2">
+          <button type="button" onClick={onCreate} className="mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[var(--accent)] hover:bg-[var(--accent-light)]">
+            <FilePlus size={16} className="shrink-0" />
+            <span className="font-medium">New document</span>
+          </button>
+          <div className="my-1 border-t border-[var(--border)]" />
+          {filteredNotes.length === 0 ? (
+            <p className="px-3 py-8 text-center text-xs text-[var(--text-subtle)]">No documents found.</p>
+          ) : filteredNotes.map(note => (
+            <button key={note.id} type="button" onClick={() => onOpen(note.id)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-[var(--bg-muted)]">
+              <FileText size={15} className="shrink-0 text-[var(--text-subtle)]" />
+              <span className="min-w-0 flex-1 truncate text-sm text-[var(--text)]">{note.title || 'Untitled'}</span>
+              <span className="shrink-0 text-[10px] text-[var(--text-subtle)]">{new Date(note.updated_at).toLocaleDateString()}</span>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    </div>
   )
 }
 
@@ -182,6 +232,7 @@ export default function EditorPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [showMoveTo, setShowMoveTo] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [showDocumentPicker, setShowDocumentPicker] = useState(false)
   const [fullWidth, setFullWidth] = useState(false)
   const [locked, setLocked] = useState(false)
   const [readingMode, setReadingMode] = useState(false)
@@ -205,10 +256,16 @@ export default function EditorPage() {
     saveTimer.current = setTimeout(() => updateNote(noteId, { content: html }), 800)
   }, [noteId, updateNote, locked])
 
-  async function handleNewTab() {
+  async function handleNewDocument() {
     if (!user) return
     const n = await createNote(user.id)
+    setShowDocumentPicker(false)
     router.push(`/editor/${n.id}`)
+  }
+
+  function openDocument(id: string) {
+    setShowDocumentPicker(false)
+    router.push(`/editor/${id}`)
   }
 
   function closeTab(id: string, e: React.MouseEvent) {
@@ -400,7 +457,7 @@ export default function EditorPage() {
                   )
                 })}
                 <Tooltip content="New note">
-                  <button type="button" onClick={handleNewTab}
+                  <button type="button" onClick={() => setShowDocumentPicker(true)}
                     className="flex items-center justify-center h-[34px] w-8 text-[var(--text-subtle)] hover:text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] rounded-t-lg transition-colors focus:outline-none shrink-0">
                     <Plus size={14} />
                   </button>
@@ -485,6 +542,7 @@ export default function EditorPage() {
       <AnimatePresence>
         {showMoveTo && <MoveToModal noteId={noteId} onClose={() => setShowMoveTo(false)} />}
         {showHistory && <VersionHistoryModal noteId={noteId} onClose={() => setShowHistory(false)} onRestore={restoreVersion} />}
+        {showDocumentPicker && <DocumentPicker onClose={() => setShowDocumentPicker(false)} onOpen={openDocument} onCreate={handleNewDocument} />}
       </AnimatePresence>
     </TooltipProvider>
   )
