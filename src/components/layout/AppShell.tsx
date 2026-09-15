@@ -7,7 +7,8 @@ import { useSettingsStore } from '@/store/settings'
 import { matchesHotkey } from '@/lib/utils'
 import { Sidebar } from './Sidebar'
 import { SettingsModal } from './SettingsModal'
-import { Search } from 'lucide-react'
+import { PanelLeft, Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore()
@@ -16,8 +17,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
   const pathname = usePathname()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [mainSidebarOpen, setMainSidebarOpen] = useState(false)
 
   const isEditor = pathname.startsWith('/editor/')
+
+  useEffect(() => {
+    if (!isEditor) {
+      setMainSidebarOpen(false)
+      return
+    }
+
+    function toggleMainSidebar() { setMainSidebarOpen(v => !v) }
+    document.addEventListener('orrery:toggle-main-sidebar', toggleMainSidebar)
+    return () => document.removeEventListener('orrery:toggle-main-sidebar', toggleMainSidebar)
+  }, [isEditor])
 
   useEffect(() => {
     if (user) loadNotes(user.id)
@@ -65,11 +78,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Body — sidebar + content side by side */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {!isEditor && <Sidebar onOpenSettings={() => setSettingsOpen(true)} />}
+        {(!isEditor || mainSidebarOpen) && <Sidebar onOpenSettings={() => setSettingsOpen(true)} />}
         <div className="flex-1 min-w-0 overflow-hidden bg-[var(--bg)]">
           {children}
         </div>
       </div>
+
+      {isEditor && (
+        <button
+          type="button"
+          onClick={() => document.dispatchEvent(new CustomEvent('orrery:toggle-main-sidebar'))}
+          className={cn(
+            'fixed bottom-4 z-[61] flex items-center gap-1.5 h-8 px-2.5 rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow-md)] text-xs text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--text-subtle)] transition-all focus:outline-none',
+            mainSidebarOpen ? 'left-[252px]' : 'left-3'
+          )}
+          aria-label={mainSidebarOpen ? 'Show editor sidebar' : 'Show main sidebar'}
+        >
+          <PanelLeft size={13} />
+          <span>{mainSidebarOpen ? 'Editor sidebar' : 'Main sidebar'}</span>
+        </button>
+      )}
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>

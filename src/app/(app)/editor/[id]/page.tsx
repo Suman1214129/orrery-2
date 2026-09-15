@@ -2,7 +2,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GitBranch, Edit3, Plus, X, ChevronLeft, ChevronRight, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare, BookOpen, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { GitBranch, Edit3, Plus, X, ChevronRight, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare, BookOpen, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useEditorStore } from '@/store/editor'
 import { useAuthStore } from '@/store/auth'
@@ -186,6 +186,7 @@ export default function EditorPage() {
   const [locked, setLocked] = useState(false)
   const [readingMode, setReadingMode] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mainSidebarOpen, setMainSidebarOpen] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuBtnRef = useRef<HTMLDivElement>(null)
 
@@ -198,6 +199,12 @@ export default function EditorPage() {
 
   useEffect(() => { if (user && notes.length === 0) loadNotes(user.id) }, [user]) // eslint-disable-line
   useEffect(() => { if (noteId) loadCheckpoints(noteId) }, [noteId, loadCheckpoints])
+
+  useEffect(() => {
+    function toggleMainSidebar() { setMainSidebarOpen(v => !v) }
+    document.addEventListener('orrery:toggle-main-sidebar', toggleMainSidebar)
+    return () => document.removeEventListener('orrery:toggle-main-sidebar', toggleMainSidebar)
+  }, [])
 
   const handleContentChange = useCallback((html: string) => {
     if (locked) return
@@ -297,11 +304,11 @@ export default function EditorPage() {
 
         {/* LEFT panel — collapsible */}
         <AnimatePresence mode="wait" initial={false}>
-          {view === 'editor' ? (
+          {view === 'editor' && !mainSidebarOpen ? (
             <motion.div key="doc-panel"
               initial={{ width: 0, opacity: 0 }} animate={{ width: sidebarCollapsed ? 28 : 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="shrink-0 overflow-hidden border-r border-[var(--border)] flex flex-col bg-[var(--bg)]">
+              className={cn('shrink-0 overflow-hidden flex flex-col bg-[var(--bg)]', !sidebarCollapsed && 'border-r border-[var(--border)]')}>
               {sidebarCollapsed ? (
                 /* Collapsed: just the expand button */
                 <div className="flex flex-col items-center pt-2">
@@ -314,11 +321,7 @@ export default function EditorPage() {
                 </div>
               ) : (
                 <>
-                  <div className="h-11 flex items-center px-3 shrink-0 border-b border-[var(--border)] gap-2">
-                    <button onClick={() => router.push('/home')}
-                      className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors focus:outline-none flex-1">
-                      <ChevronLeft size={14} /> All docs
-                    </button>
+                  <div className="h-11 flex items-center justify-end px-3 shrink-0 border-b border-[var(--border)] gap-2">
                     <Tooltip content="Collapse sidebar">
                       <button onClick={() => setSidebarCollapsed(true)}
                         className="flex items-center justify-center size-6 rounded text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none shrink-0">
@@ -332,11 +335,11 @@ export default function EditorPage() {
                 </>
               )}
             </motion.div>
-          ) : (
+          ) : view !== 'editor' && !mainSidebarOpen ? (
             <motion.div key="ai-panel"
               initial={{ width: 0, opacity: 0 }} animate={{ width: sidebarCollapsed ? 28 : 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="shrink-0 overflow-hidden border-r border-[var(--border)] flex flex-col bg-[var(--bg)]">
+              className={cn('shrink-0 overflow-hidden flex flex-col bg-[var(--bg)]', !sidebarCollapsed && 'border-r border-[var(--border)]')}>
               {sidebarCollapsed ? (
                 <div className="flex flex-col items-center pt-2">
                   <Tooltip content="Expand sidebar">
@@ -348,11 +351,7 @@ export default function EditorPage() {
                 </div>
               ) : (
                 <>
-                  <div className="h-11 flex items-center px-3 shrink-0 border-b border-[var(--border)] gap-2">
-                    <button onClick={() => router.push('/home')}
-                      className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors focus:outline-none flex-1">
-                      <ChevronLeft size={14} /> All docs
-                    </button>
+                  <div className="h-11 flex items-center justify-end px-3 shrink-0 border-b border-[var(--border)] gap-2">
                     <Tooltip content="Collapse sidebar">
                       <button onClick={() => setSidebarCollapsed(true)}
                         className="flex items-center justify-center size-6 rounded text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none shrink-0">
@@ -373,7 +372,7 @@ export default function EditorPage() {
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">
 
           {/* Chrome-style tab bar */}
-          <div className="bg-[var(--bg-muted)] shrink-0 border-b border-[var(--border)]">
+          <div className="bg-[var(--bg)] shrink-0 border-b border-[var(--border)]">
             <div className="flex items-end h-10 px-1">
               <nav className="flex overflow-x-auto flex-1 min-w-0 items-end h-full [&::-webkit-scrollbar]:hidden" role="tablist">
                 {tabNotes.map((t) => {
