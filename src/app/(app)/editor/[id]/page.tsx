@@ -2,7 +2,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GitBranch, Edit3, Plus, X, ChevronLeft, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare, BookOpen } from 'lucide-react'
+import { GitBranch, Edit3, Plus, X, ChevronLeft, ChevronRight, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare, BookOpen, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useEditorStore } from '@/store/editor'
 import { useAuthStore } from '@/store/auth'
@@ -185,6 +185,7 @@ export default function EditorPage() {
   const [fullWidth, setFullWidth] = useState(false)
   const [locked, setLocked] = useState(false)
   const [readingMode, setReadingMode] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuBtnRef = useRef<HTMLDivElement>(null)
 
@@ -294,37 +295,76 @@ export default function EditorPage() {
     <TooltipProvider>
       <div className="flex h-full overflow-hidden">
 
-        {/* LEFT panel */}
-        <AnimatePresence mode="wait">
+        {/* LEFT panel — collapsible */}
+        <AnimatePresence mode="wait" initial={false}>
           {view === 'editor' ? (
             <motion.div key="doc-panel"
-              initial={{ width: 0, opacity: 0 }} animate={{ width: 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
+              initial={{ width: 0, opacity: 0 }} animate={{ width: sidebarCollapsed ? 28 : 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="shrink-0 overflow-hidden border-r border-[var(--border)] flex flex-col">
-              <div className="h-11 flex items-center px-3 shrink-0 border-b border-[var(--border)]">
-                <button onClick={() => router.push('/home')}
-                  className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors focus:outline-none">
-                  <ChevronLeft size={14} /> All docs
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <DocPanel noteId={noteId} noteTitle={note.title} noteContent={note.content} noteUpdatedAt={note.updated_at} />
-              </div>
+              className="shrink-0 overflow-hidden border-r border-[var(--border)] flex flex-col bg-[var(--bg)]">
+              {sidebarCollapsed ? (
+                /* Collapsed: just the expand button */
+                <div className="flex flex-col items-center pt-2">
+                  <Tooltip content="Expand sidebar">
+                    <button onClick={() => setSidebarCollapsed(false)}
+                      className="flex items-center justify-center size-7 rounded-md text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none">
+                      <PanelLeftOpen size={14} />
+                    </button>
+                  </Tooltip>
+                </div>
+              ) : (
+                <>
+                  <div className="h-11 flex items-center px-3 shrink-0 border-b border-[var(--border)] gap-2">
+                    <button onClick={() => router.push('/home')}
+                      className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors focus:outline-none flex-1">
+                      <ChevronLeft size={14} /> All docs
+                    </button>
+                    <Tooltip content="Collapse sidebar">
+                      <button onClick={() => setSidebarCollapsed(true)}
+                        className="flex items-center justify-center size-6 rounded text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none shrink-0">
+                        <PanelLeftClose size={13} />
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <DocPanel noteId={noteId} noteTitle={note.title} noteContent={note.content} noteUpdatedAt={note.updated_at} />
+                  </div>
+                </>
+              )}
             </motion.div>
           ) : (
             <motion.div key="ai-panel"
-              initial={{ width: 0, opacity: 0 }} animate={{ width: 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
+              initial={{ width: 0, opacity: 0 }} animate={{ width: sidebarCollapsed ? 28 : 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="shrink-0 overflow-hidden border-r border-[var(--border)] flex flex-col">
-              <div className="h-11 flex items-center px-3 shrink-0 border-b border-[var(--border)]">
-                <button onClick={() => router.push('/home')}
-                  className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors focus:outline-none">
-                  <ChevronLeft size={14} /> All docs
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <AISidebar noteId={noteId} noteContent={note.content} />
-              </div>
+              className="shrink-0 overflow-hidden border-r border-[var(--border)] flex flex-col bg-[var(--bg)]">
+              {sidebarCollapsed ? (
+                <div className="flex flex-col items-center pt-2">
+                  <Tooltip content="Expand sidebar">
+                    <button onClick={() => setSidebarCollapsed(false)}
+                      className="flex items-center justify-center size-7 rounded-md text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none">
+                      <PanelLeftOpen size={14} />
+                    </button>
+                  </Tooltip>
+                </div>
+              ) : (
+                <>
+                  <div className="h-11 flex items-center px-3 shrink-0 border-b border-[var(--border)] gap-2">
+                    <button onClick={() => router.push('/home')}
+                      className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors focus:outline-none flex-1">
+                      <ChevronLeft size={14} /> All docs
+                    </button>
+                    <Tooltip content="Collapse sidebar">
+                      <button onClick={() => setSidebarCollapsed(true)}
+                        className="flex items-center justify-center size-6 rounded text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none shrink-0">
+                        <PanelLeftClose size={13} />
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <AISidebar noteId={noteId} noteContent={note.content} />
+                  </div>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -332,39 +372,42 @@ export default function EditorPage() {
         {/* RIGHT: editor area */}
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">
 
-          {/* Tab bar */}
-          <div className="border-b border-[var(--border)] bg-[var(--bg)] shrink-0">
-            <div className="flex items-stretch h-10">
-              <nav className="flex overflow-x-auto flex-1 min-w-0 [&::-webkit-scrollbar]:hidden" role="tablist">
+          {/* Chrome-style tab bar */}
+          <div className="bg-[var(--bg-muted)] shrink-0 border-b border-[var(--border)]">
+            <div className="flex items-end h-10 px-1">
+              <nav className="flex overflow-x-auto flex-1 min-w-0 items-end h-full [&::-webkit-scrollbar]:hidden" role="tablist">
                 {tabNotes.map((t) => {
                   const isActive = t.id === noteId
                   return (
                     <button key={t.id} type="button" role="tab" aria-selected={isActive}
                       onClick={() => router.push(`/editor/${t.id}`)}
                       className={cn(
-                        'group relative flex items-center gap-1.5 h-full px-3 text-sm whitespace-nowrap',
-                        'after:absolute after:bottom-0 after:inset-x-0 after:h-0.5 after:bg-transparent',
-                        'focus:outline-none transition-colors',
-                        isActive ? 'text-[var(--text)] font-medium after:bg-[var(--accent)]' : 'text-[var(--text-subtle)] hover:text-[var(--text-muted)]'
+                        'group relative flex items-center gap-1.5 h-[34px] px-3 text-[13px] whitespace-nowrap shrink-0 max-w-[180px] transition-all focus:outline-none select-none',
+                        'rounded-t-lg',
+                        isActive
+                          ? 'bg-[var(--bg)] text-[var(--text)] font-medium shadow-[0_1px_0_var(--bg)] z-10'
+                          : 'text-[var(--text-subtle)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-muted)]'
                       )}>
-                      <span className="max-w-[140px] truncate">{t.title || 'Untitled'}</span>
-                      <span role="button" tabIndex={0} onClick={e => closeTab(t.id, e)}
-                        className="flex items-center justify-center size-4 rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-[var(--bg-muted)] text-[var(--text-muted)] transition-opacity">
-                        <X size={10} />
+                      <span className="flex-1 truncate min-w-0">{t.title || 'Untitled'}</span>
+                      <span
+                        role="button" tabIndex={0}
+                        onClick={e => closeTab(t.id, e)}
+                        className="flex items-center justify-center size-4 rounded-full opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-[var(--border)] text-[var(--text-muted)] transition-all shrink-0 ml-0.5">
+                        <X size={9} />
                       </span>
                     </button>
                   )
                 })}
                 <Tooltip content="New note">
                   <button type="button" onClick={handleNewTab}
-                    className="flex items-center justify-center h-full px-2.5 text-[var(--text-subtle)] hover:text-[var(--text-muted)] transition-colors focus:outline-none">
+                    className="flex items-center justify-center h-[34px] w-8 text-[var(--text-subtle)] hover:text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] rounded-t-lg transition-colors focus:outline-none shrink-0">
                     <Plus size={14} />
                   </button>
                 </Tooltip>
               </nav>
 
-              {/* Right controls: reading toggle + ⋯ menu */}
-              <div ref={menuBtnRef} className="flex items-center gap-1 px-2 shrink-0 relative">
+              {/* Right controls */}
+              <div ref={menuBtnRef} className="flex items-center gap-1 px-2 shrink-0 relative self-center">
                 {locked && (
                   <span className="mr-1 text-[10px] text-[var(--text-subtle)] flex items-center gap-1">
                     <Lock size={10} /> Locked
