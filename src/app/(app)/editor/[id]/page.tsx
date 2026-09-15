@@ -461,13 +461,13 @@ export default function EditorPage() {
                 {tabNotes.map((t) => {
                   const isActive = t.id === noteId
                   return (
-                    <button key={t.id} type="button" role="tab" aria-selected={isActive}
+                    <button key={t.id} type="button" role="tab" aria-selected={isActive} aria-current={isActive ? 'page' : undefined}
                       onClick={() => router.push(`/editor/${t.id}`)}
                       className={cn(
-                        'group relative flex items-center gap-1.5 h-[34px] px-3 text-[13px] whitespace-nowrap shrink-0 max-w-[180px] transition-all focus:outline-none select-none',
+                        'group relative flex items-center gap-1.5 h-[34px] px-3 text-[13px] whitespace-nowrap shrink-0 max-w-[180px] transition-colors duration-75 focus:outline-none select-none',
                         'rounded-t-lg',
                         isActive
-                          ? 'bg-[var(--bg)] text-[var(--text)] font-medium shadow-[0_1px_0_var(--bg)] z-10'
+                          ? 'bg-[var(--bg)] text-[var(--text)] font-semibold border-x border-t border-[var(--border)] -mb-px z-10'
                           : 'text-[var(--text-subtle)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text-muted)]'
                       )}>
                       <span className="flex-1 truncate min-w-0">{t.title || 'Untitled'}</span>

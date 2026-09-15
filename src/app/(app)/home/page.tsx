@@ -1,8 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Plus, FileText, LayoutGrid, List } from 'lucide-react'
+import { Plus, FileText, LayoutGrid, List, MoreHorizontal, Trash2, Archive, Copy, Share2, Star } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useAuthStore } from '@/store/auth'
 import { cn, formatDate } from '@/lib/utils'
@@ -36,6 +36,16 @@ export default function HomePage() {
   const { user } = useAuthStore()
   const { notes, folders, createNote } = useNotesStore()
   const [view, setView] = useState<ViewMode>('grid')
+  const [menuNoteId, setMenuNoteId] = useState<string | null>(null)
+  const [starredIds, setStarredIds] = useState<string[]>([])
+  const [archivedIds, setArchivedIds] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      setStarredIds(JSON.parse(localStorage.getItem('orrery:starred-notes') ?? '[]'))
+      setArchivedIds(JSON.parse(localStorage.getItem('orrery:archived-notes') ?? '[]'))
+    } catch {}
+  }, [])
 
   async function handleNewNote() {
     if (!user) return
@@ -52,7 +62,60 @@ export default function HomePage() {
     return html.replace(/<[^>]+>/g, '').trim()
   }
 
-  const sorted = [...notes].sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+  function toggleStar(id: string) {
+    const next = starredIds.includes(id) ? starredIds.filter(noteId => noteId !== id) : [...starredIds, id]
+    setStarredIds(next)
+    localStorage.setItem('orrery:starred-notes', JSON.stringify(next))
+    setMenuNoteId(null)
+  }
+
+  function archiveNote(id: string) {
+    const next = archivedIds.includes(id) ? archivedIds : [...archivedIds, id]
+    setArchivedIds(next)
+    localStorage.setItem('orrery:archived-notes', JSON.stringify(next))
+    setMenuNoteId(null)
+  }
+
+  async function trashNote(id: string) {
+    await useNotesStore.getState().deleteNote(id)
+    setMenuNoteId(null)
+  }
+
+  async function shareNote(id: string) {
+    const url = `${window.location.origin}/editor/${id}`
+    const note = notes.find(item => item.id === id)
+    if (navigator.share) await navigator.share({ title: note?.title || 'Untitled', url })
+    else await navigator.clipboard.writeText(url)
+    setMenuNoteId(null)
+  }
+
+  function copyNoteLink(id: string) {
+    navigator.clipboard.writeText(`${window.location.origin}/editor/${id}`)
+    setMenuNoteId(null)
+  }
+
+  function noteMenu(id: string) {
+    return (
+      <div className="absolute right-2 top-2 z-20" onClick={e => e.stopPropagation()}>
+        <button type="button" onClick={() => setMenuNoteId(menuNoteId === id ? null : id)} aria-label="Document actions"
+          className="flex size-7 items-center justify-center rounded-md bg-[var(--surface)]/90 text-[var(--text-subtle)] opacity-0 shadow-sm transition-opacity group-hover:opacity-100 hover:bg-[var(--bg-muted)] hover:text-[var(--text)] focus:opacity-100">
+          <MoreHorizontal size={15} />
+        </button>
+        {menuNoteId === id && (
+          <div className="absolute right-0 top-8 w-40 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl">
+            <button type="button" onClick={() => toggleStar(id)} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-[var(--text)] hover:bg-[var(--bg-muted)]"><Star size={13} className={starredIds.includes(id) ? 'fill-[var(--accent)] text-[var(--accent)]' : ''} /> {starredIds.includes(id) ? 'Unstar' : 'Star'}</button>
+            <button type="button" onClick={() => archiveNote(id)} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-[var(--text)] hover:bg-[var(--bg-muted)]"><Archive size={13} /> Archive</button>
+            <button type="button" onClick={() => copyNoteLink(id)} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-[var(--text)] hover:bg-[var(--bg-muted)]"><Copy size={13} /> Copy link</button>
+            <button type="button" onClick={() => shareNote(id)} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-[var(--text)] hover:bg-[var(--bg-muted)]"><Share2 size={13} /> Share</button>
+            <div className="my-1 border-t border-[var(--border)]" />
+            <button type="button" onClick={() => trashNote(id)} className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"><Trash2 size={13} /> Move to trash</button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const sorted = [...notes].filter(note => !archivedIds.includes(note.id)).sort((a, b) => b.updated_at.localeCompare(a.updated_at))
 
   const views: [ViewMode, React.ReactNode][] = [
     ['grid', <LayoutGrid size={14} key="g" />],
@@ -125,13 +188,14 @@ export default function HomePage() {
               const preview = stripHtml(note.content).slice(0, 400)
               const folder = getFolderName(note.folder_id)
               return (
-                <motion.button
+                <motion.div
                   key={note.id}
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}
                   onClick={() => router.push(`/editor/${note.id}`)}
-                  className="break-inside-avoid mb-3 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left flex flex-col gap-2 hover:border-[var(--text-subtle)] hover:shadow-sm transition-all overflow-hidden"
+                  className="group relative break-inside-avoid mb-3 w-full cursor-pointer rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left flex flex-col gap-2 hover:border-[var(--text-subtle)] hover:shadow-sm transition-all overflow-hidden"
                 >
-                  <p className="text-sm font-semibold text-[var(--text)] leading-snug">{note.title || 'Untitled'}</p>
+                  {noteMenu(note.id)}
+                  <p className="text-base font-semibold text-[var(--text)] leading-snug">{note.title || 'Untitled'}</p>
                   {preview && (
                     <p className="text-xs text-[var(--text-muted)] leading-relaxed whitespace-pre-line">{preview}</p>
                   )}
@@ -147,7 +211,7 @@ export default function HomePage() {
                       </div>
                     )}
                   </div>
-                </motion.button>
+                </motion.div>
               )
             })}
           </div>
@@ -155,29 +219,25 @@ export default function HomePage() {
         ) : (
           /* Regular grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            <motion.button whileHover={{ scale: 1.005 }} whileTap={{ scale: 0.995 }} onClick={handleNewNote}
-              className="h-48 rounded-xl border-2 border-dashed border-[var(--border)] flex flex-col items-center justify-center gap-2 text-[var(--text-subtle)] hover:border-[var(--text-muted)] hover:text-[var(--text-muted)] transition-colors">
-              <Plus size={22} />
-              <span className="text-xs font-medium">New Document</span>
-            </motion.button>
             {sorted.map((note, i) => {
               const preview = stripHtml(note.content).slice(0, 200)
               const folder = getFolderName(note.folder_id)
               return (
-                <motion.button key={note.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
+                <motion.div key={note.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
                   whileHover={{ scale: 1.005 }} whileTap={{ scale: 0.995 }}
                   onClick={() => router.push(`/editor/${note.id}`)}
-                  className="h-48 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left flex flex-col gap-2 hover:border-[var(--text-subtle)] hover:shadow-sm transition-all overflow-hidden">
+                  className="group relative h-48 cursor-pointer rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-left flex flex-col gap-2 hover:border-[var(--text-subtle)] hover:shadow-sm transition-all overflow-hidden">
+                  {noteMenu(note.id)}
                   <div className="shrink-0">
-                    <p className="text-sm font-semibold text-[var(--text)] leading-snug line-clamp-2">{note.title || 'Untitled'}</p>
+                    <p className="text-base font-semibold text-[var(--text)] leading-snug line-clamp-2">{note.title || 'Untitled'}</p>
                     <p className="text-[10px] text-[var(--text-subtle)] mt-0.5">
                       {folder ? `${folder} · ` : ''}{formatDate(note.updated_at)}
                     </p>
                   </div>
                   <div className="flex-1 overflow-hidden">
                     {preview
-                      ? <p className="text-xs text-[var(--text-muted)] leading-relaxed line-clamp-5">{preview}</p>
-                      : <p className="text-xs text-[var(--text-subtle)] italic">Empty document</p>
+                      ? <p className="text-sm text-[var(--text-muted)] leading-relaxed line-clamp-5">{preview}</p>
+                      : <p className="text-sm text-[var(--text-subtle)] italic">Empty document</p>
                     }
                   </div>
                   {note.tags?.length > 0 && (
@@ -187,7 +247,7 @@ export default function HomePage() {
                       ))}
                     </div>
                   )}
-                </motion.button>
+                </motion.div>
               )
             })}
           </div>
