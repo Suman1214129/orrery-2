@@ -3,8 +3,8 @@ import { useEffect, useCallback, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  PanelLeftOpen, GitBranch, Eye, Edit3, Sparkles,
-  CheckSquare, ChevronLeft,
+  GitBranch, Eye, Edit3, Sparkles,
+  CheckSquare, Plus, X,
 } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useEditorStore } from '@/store/editor'
@@ -14,16 +14,19 @@ import { Button } from '@/components/ui/Button'
 import { Tooltip, TooltipProvider } from '@/components/ui/Tooltip'
 import dynamic from 'next/dynamic'
 import { NoteEditor } from '@/components/editor/NoteEditor'
+import { cn, matchesHotkey } from '@/lib/utils'
 const CheckpointCanvas = dynamic(() => import('@/components/canvas/CheckpointCanvas').then(m => ({ default: m.CheckpointCanvas })), { ssr: false })
 const AISidebar = dynamic(() => import('@/components/editor/AISidebar').then(m => ({ default: m.AISidebar })), { ssr: false })
-import { matchesHotkey } from '@/lib/utils'
+
+// Max tabs shown before scrolling
+const MAX_TABS = 8
 
 export default function EditorPage() {
   const params = useParams()
   const router = useRouter()
   const noteId = params.id as string
 
-  const { notes, sidebarOpen, setSidebarOpen, updateNote, loadNotes } = useNotesStore()
+  const { notes, createNote, setSidebarOpen, updateNote, loadNotes } = useNotesStore()
   const { user } = useAuthStore()
   const hotkeys = useSettingsStore((s) => s.hotkeys)
   const {
@@ -34,9 +37,19 @@ export default function EditorPage() {
   const note = notes.find((n) => n.id === noteId)
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [title, setTitle] = useState(note?.title ?? '')
+  // openTabIds: ordered list of note IDs open as tabs
+  const [openTabIds, setOpenTabIds] = useState<string[]>(() => [noteId])
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // If notes haven't loaded yet (direct URL navigation), load them
+  // Keep current note in tabs
+  useEffect(() => {
+    setOpenTabIds((prev) => {
+      if (prev.includes(noteId)) return prev
+      const next = [...prev, noteId]
+      return next.slice(-MAX_TABS)
+    })
+  }, [noteId])
+
   useEffect(() => {
     if (user && notes.length === 0) loadNotes(user.id)
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -76,17 +89,31 @@ export default function EditorPage() {
     await createCheckpoint(noteId, user.id, label, note.content, undefined)
   }
 
-  // Hotkeys
+  async function handleNewTab() {
+    if (!user) return
+    const newNote = await createNote(user.id)
+    router.push(`/editor/${newNote.id}`)
+  }
+
+  function closeTab(id: string, e: React.MouseEvent) {
+    e.stopPropagation()
+    const next = openTabIds.filter((t) => t !== id)
+    setOpenTabIds(next)
+    if (id === noteId) {
+      if (next.length > 0) router.push(`/editor/${next[next.length - 1]}`)
+      else router.push('/home')
+    }
+  }
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (matchesHotkey(e, hotkeys.saveNote)) { e.preventDefault(); /* auto-saved */ }
-      if (matchesHotkey(e, hotkeys.toggleSidebar)) { e.preventDefault(); setSidebarOpen(!sidebarOpen) }
+      if (matchesHotkey(e, hotkeys.saveNote)) { e.preventDefault() }
       if (matchesHotkey(e, hotkeys.toggleCanvas)) { e.preventDefault(); setView(view === 'editor' ? 'canvas' : 'editor') }
       if (matchesHotkey(e, hotkeys.forkBranch)) { e.preventDefault(); if (selectedCheckpointId) setAiPanelOpen(true) }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [hotkeys, sidebarOpen, view, selectedCheckpointId, setSidebarOpen, setView])
+  }, [hotkeys, view, selectedCheckpointId, setView])
 
   const loading = useNotesStore((s) => s.loading)
 
@@ -106,126 +133,168 @@ export default function EditorPage() {
     )
   }
 
+  const tabNotes = openTabIds.map((id) => notes.find((n) => n.id === id)).filter(Boolean) as typeof notes
+
   return (
     <TooltipProvider>
       <div className="flex flex-col h-full overflow-hidden">
-        {/* Topbar */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--surface)] flex-shrink-0">
-          {!sidebarOpen && (
-            <Tooltip content="Open sidebar">
-              <Button variant="ghost" size="icon-sm" onClick={() => setSidebarOpen(true)}>
-                <PanelLeftOpen size={15} />
-              </Button>
-            </Tooltip>
-          )}
 
-          <Tooltip content="Back to home">
-            <Button variant="ghost" size="icon-sm" onClick={() => router.push('/home')}>
-              <ChevronLeft size={15} />
-            </Button>
-          </Tooltip>
+        {/* ── Tab bar (Preline underline tabs) ── */}
+        <div className="border-b border-[var(--border)] bg-[var(--surface)] flex-shrink-0">
+          <div className="flex items-stretch">
+            {/* Tabs */}
+            <nav
+              className="flex gap-x-0 overflow-x-auto flex-1 min-w-0 [&::-webkit-scrollbar]:hidden"
+              aria-label="Open notes"
+              role="tablist"
+              aria-orientation="horizontal"
+            >
+              {tabNotes.map((t) => {
+                const isActive = t.id === noteId
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => router.push(`/editor/${t.id}`)}
+                    className={cn(
+                      'group relative flex items-center gap-x-1.5 py-3 px-3 text-sm whitespace-nowrap',
+                      'after:absolute after:-bottom-px after:inset-x-0 after:h-0.5 after:bg-transparent',
+                      'focus:outline-none transition-colors',
+                      isActive
+                        ? 'font-semibold text-[var(--accent)] after:bg-[var(--accent)]'
+                        : 'text-[var(--text-muted)] hover:text-[var(--accent)] focus:text-[var(--accent)]'
+                    )}
+                  >
+                    <span className="max-w-[120px] truncate">{t.title || 'Untitled'}</span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => closeTab(t.id, e)}
+                      onKeyDown={(e) => e.key === 'Enter' && closeTab(t.id, e as unknown as React.MouseEvent)}
+                      className={cn(
+                        'flex items-center justify-center size-4 rounded-sm transition-colors',
+                        'opacity-0 group-hover:opacity-100',
+                        isActive && 'opacity-60',
+                        'hover:bg-[var(--bg-muted)] hover:opacity-100 text-[var(--text-muted)]'
+                      )}
+                    >
+                      <X size={10} />
+                    </span>
+                  </button>
+                )
+              })}
+            </nav>
 
-          <input
-            value={title}
-            onChange={handleTitleChange}
-            placeholder="Untitled"
-            className="flex-1 bg-transparent text-sm font-semibold text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none min-w-0"
-          />
+            {/* Right controls */}
+            <div className="flex items-center gap-1 px-2 shrink-0 border-l border-[var(--border)]">
+              {/* New tab */}
+              <Tooltip content="New note">
+                <button
+                  type="button"
+                  onClick={handleNewTab}
+                  className="flex items-center justify-center size-7 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none"
+                  aria-label="New note"
+                >
+                  <Plus size={14} />
+                </button>
+              </Tooltip>
 
-          <div className="flex items-center gap-1 ml-auto">
+              {/* Checkpoint */}
+              {view === 'editor' && (
+                <Tooltip content="Add checkpoint">
+                  <button
+                    type="button"
+                    onClick={addCheckpoint}
+                    className="flex items-center justify-center size-7 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none"
+                    aria-label="Add checkpoint"
+                  >
+                    <CheckSquare size={14} />
+                  </button>
+                </Tooltip>
+              )}
+
+              {/* AI panel */}
+              <Tooltip content={aiPanelOpen ? 'Close AI panel' : 'Open AI panel'}>
+                <button
+                  type="button"
+                  onClick={() => setAiPanelOpen(!aiPanelOpen)}
+                  className={cn(
+                    'flex items-center justify-center size-7 rounded-md transition-colors focus:outline-none',
+                    aiPanelOpen
+                      ? 'bg-[var(--accent)] text-[var(--accent-fg)]'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)]'
+                  )}
+                  aria-label="Toggle AI panel"
+                >
+                  <Sparkles size={14} />
+                </button>
+              </Tooltip>
+            </div>
+          </div>
+
+          {/* Title input row */}
+          <div className="flex items-center gap-2 px-4 py-1.5 border-t border-[var(--border)]">
+            <input
+              value={title}
+              onChange={handleTitleChange}
+              placeholder="Untitled"
+              className="flex-1 bg-transparent text-sm font-semibold text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none min-w-0"
+            />
             {/* View toggle */}
-            <div className="flex items-center rounded-[var(--radius)] border border-[var(--border)] overflow-hidden">
+            <div className="flex items-center rounded-md border border-[var(--border)] overflow-hidden shrink-0">
               <Tooltip content={`Editor (${hotkeys.toggleCanvas})`}>
                 <button
                   onClick={() => setView('editor')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors ${
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors',
                     view === 'editor'
                       ? 'bg-[var(--accent-light)] text-[var(--accent)]'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]'
-                  }`}
+                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-muted)]'
+                  )}
                 >
-                  <Edit3 size={12} /> Editor
+                  <Edit3 size={11} /> Editor
                 </button>
               </Tooltip>
               <div className="w-px h-4 bg-[var(--border)]" />
               <Tooltip content={`Canvas (${hotkeys.toggleCanvas})`}>
                 <button
                   onClick={() => setView('canvas')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors ${
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1 text-xs transition-colors',
                     view === 'canvas'
                       ? 'bg-[var(--accent-light)] text-[var(--accent)]'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]'
-                  }`}
+                      : 'text-[var(--text-muted)] hover:bg-[var(--bg-muted)]'
+                  )}
                 >
-                  <Eye size={12} /> Canvas
+                  <Eye size={11} /> Canvas
                 </button>
               </Tooltip>
             </div>
-
-            {view === 'editor' && (
-              <Tooltip content="Add checkpoint">
-                <Button variant="ghost" size="icon-sm" onClick={addCheckpoint}>
-                  <CheckSquare size={14} />
-                </Button>
-              </Tooltip>
-            )}
-
-            <Tooltip content={aiPanelOpen ? 'Close AI panel' : 'Open AI panel'}>
-              <Button
-                variant={aiPanelOpen ? 'default' : 'ghost'}
-                size="icon-sm"
-                onClick={() => setAiPanelOpen(!aiPanelOpen)}
-              >
-                <Sparkles size={14} />
-              </Button>
-            </Tooltip>
           </div>
         </div>
 
         {/* Body */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Main content */}
           <div className="flex-1 overflow-hidden min-w-0">
             <AnimatePresence mode="wait">
               {view === 'editor' ? (
-                <motion.div
-                  key="editor"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="h-full"
-                >
-                  <NoteEditor
-                    noteId={noteId}
-                    content={note.content}
-                    onChange={handleContentChange}
-                  />
+                <motion.div key="editor" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="h-full">
+                  <NoteEditor noteId={noteId} content={note.content} onChange={handleContentChange} />
                 </motion.div>
               ) : (
-                <motion.div
-                  key="canvas"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="h-full"
-                >
+                <motion.div key="canvas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="h-full">
                   <CheckpointCanvas
                     noteId={noteId}
-                    onNodeClick={(cpId) => {
-                      // scroll editor to checkpoint position if switching back
-                    }}
-                    onForkRequest={(cpId) => {
-                      setAiPanelOpen(true)
-                    }}
+                    onNodeClick={() => {}}
+                    onForkRequest={() => setAiPanelOpen(true)}
                   />
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* AI Panel */}
           <AnimatePresence>
             {aiPanelOpen && (
               <motion.div
@@ -242,7 +311,7 @@ export default function EditorPage() {
           </AnimatePresence>
         </div>
 
-        {/* Bottom floating chip — view switcher (Craft/Sudowrite style) */}
+        {/* Bottom floating chip */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -251,17 +320,19 @@ export default function EditorPage() {
           >
             <button
               onClick={() => { setView('editor'); setSidebarMode('files') }}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors',
                 view === 'editor' ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
-              }`}
+              )}
             >
               <Edit3 size={11} /> Editing
             </button>
             <button
               onClick={() => { setView('canvas'); setSidebarMode('ai'); setAiPanelOpen(true) }}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors',
                 view === 'canvas' ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
-              }`}
+              )}
             >
               <GitBranch size={11} /> Visualization
             </button>

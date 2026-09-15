@@ -15,7 +15,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
 import { WikiLink, buildWikiLinkSuggestion } from './WikiLink'
 import { TagExtension, buildTagSuggestion } from './TagExtension'
-import { EditorToolbar } from './EditorToolbar'
+import { FloatingFormatMenu } from './FloatingFormatMenu'
 import { useNotesStore } from '@/store/notes'
 import { useSettingsStore } from '@/store/settings'
 import { matchesHotkey } from '@/lib/utils'
@@ -89,7 +89,7 @@ export function NoteEditorInner({ noteId, content, onChange }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      <EditorToolbar editor={editor} />
+      <FloatingFormatMenu editor={editor} />
       <div className="flex-1 overflow-y-auto px-8 py-6 max-w-3xl mx-auto w-full">
         <EditorContent editor={editor} />
       </div>
