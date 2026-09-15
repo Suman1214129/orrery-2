@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Plus, FileText, LayoutGrid, List, Table2, SortAsc, SortDesc, Search } from 'lucide-react'
+import { Plus, FileText, LayoutGrid, List, Table2, SortAsc, SortDesc } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useAuthStore } from '@/store/auth'
 import { cn, formatDate } from '@/lib/utils'
@@ -15,7 +15,6 @@ export default function HomePage() {
   const { user } = useAuthStore()
   const { notes, folders, createNote } = useNotesStore()
   const [view, setView] = useState<ViewMode>('grid')
-  const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('updated_at')
   const [sortAsc, setSortAsc] = useState(false)
 
@@ -40,7 +39,6 @@ export default function HomePage() {
   }
 
   const filtered = notes
-    .filter(n => !query || n.title.toLowerCase().includes(query.toLowerCase()) || n.content.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => {
       const va = a[sortKey] ?? '', vb = b[sortKey] ?? ''
       return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va)
@@ -58,17 +56,7 @@ export default function HomePage() {
 
       {/* Toolbar */}
       <div className="shrink-0 flex items-center gap-3 px-6 py-3 border-b border-[var(--border)]">
-        {/* Search */}
-        <div className="relative flex-1 max-w-xs">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Filter…"
-            className="w-full h-8 pl-7 pr-3 text-sm rounded-lg bg-[var(--bg-muted)] border border-transparent text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border)]"
-          />
-        </div>
-        <span className="text-xs text-[var(--text-subtle)] shrink-0">{filtered.length} doc{filtered.length !== 1 ? 's' : ''}</span>
+        <span className="text-xs text-[var(--text-subtle)]">{filtered.length} doc{filtered.length !== 1 ? 's' : ''}</span>
         <div className="flex-1" />
         {/* View toggle */}
         <div className="flex items-center rounded-lg border border-[var(--border)] overflow-hidden">
@@ -99,17 +87,13 @@ export default function HomePage() {
               </svg>
             </div>
             <div>
-              <p className="text-base font-semibold text-[var(--text)]">{query ? 'No results' : 'Start writing'}</p>
-              <p className="text-sm text-[var(--text-muted)] mt-1 max-w-xs">
-                {query ? 'Try a different search term.' : 'Create a note, write freely, and branch off alternate paths.'}
-              </p>
+              <p className="text-base font-semibold text-[var(--text)]">Start writing</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1 max-w-xs">Create a note, write freely, and branch off alternate paths.</p>
             </div>
-            {!query && (
-              <button onClick={handleNewNote}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--text)] text-[var(--bg)] text-sm font-medium hover:opacity-80 transition-opacity">
-                <Plus size={14} /> Create your first note
-              </button>
-            )}
+            <button onClick={handleNewNote}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--text)] text-[var(--bg)] text-sm font-medium hover:opacity-80 transition-opacity">
+              <Plus size={14} /> Create your first note
+            </button>
           </motion.div>
 
         ) : view === 'table' ? (

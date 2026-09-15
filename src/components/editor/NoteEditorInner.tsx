@@ -19,7 +19,7 @@ import { TagExtension, buildTagSuggestion } from './TagExtension'
 import { FloatingFormatMenu } from './FloatingFormatMenu'
 import { useNotesStore } from '@/store/notes'
 import { useSettingsStore } from '@/store/settings'
-import { matchesHotkey } from '@/lib/utils'
+import { matchesHotkey, cn } from '@/lib/utils'
 
 const lowlight = createLowlight(common)
 
@@ -27,9 +27,10 @@ interface Props {
   noteId: string
   content: string
   onChange: (html: string) => void
+  fullWidth?: boolean
 }
 
-export function NoteEditorInner({ noteId, content, onChange }: Props) {
+export function NoteEditorInner({ noteId, content, onChange, fullWidth }: Props) {
   const notes = useNotesStore((s) => s.notes)
   const updateNote = useNotesStore((s) => s.updateNote)
   const hotkeys = useSettingsStore((s) => s.hotkeys)
@@ -106,7 +107,7 @@ export function NoteEditorInner({ noteId, content, onChange }: Props) {
   return (
     <div className="flex flex-col h-full">
       <FloatingFormatMenu editor={editor} />
-      <div className="flex-1 overflow-y-auto px-8 py-6 max-w-3xl mx-auto w-full">
+      <div className={cn('flex-1 overflow-y-auto px-8 py-6 mx-auto w-full', fullWidth ? 'max-w-full' : 'max-w-3xl')}>
         <EditorContent editor={editor} />
       </div>
     </div>

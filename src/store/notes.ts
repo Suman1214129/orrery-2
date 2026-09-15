@@ -20,6 +20,7 @@ interface NotesState {
   createNote: (userId: string, folderId?: string) => Promise<Note>
   updateNote: (id: string, patch: Partial<Note>) => Promise<void>
   deleteNote: (id: string) => Promise<void>
+  duplicateNote: (id: string, userId: string) => Promise<Note>
   createFolder: (userId: string, name: string, parentId?: string) => Promise<Folder>
   deleteFolder: (id: string) => Promise<void>
 }
@@ -89,6 +90,23 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       notes: s.notes.filter((n) => n.id !== id),
       activeNoteId: s.activeNoteId === id ? null : s.activeNoteId,
     }))
+  },
+
+  duplicateNote: async (id, userId) => {
+    const original = get().notes.find(n => n.id === id)
+    if (!original) throw new Error('Note not found')
+    const copy: Note = {
+      ...original,
+      id: generateId(),
+      title: original.title ? `${original.title} (copy)` : 'Untitled (copy)',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    await db.notes.add(copy)
+    const supabase = createClient()
+    await supabase.from('notes').insert(copy)
+    set((s) => ({ notes: [copy, ...s.notes] }))
+    return copy
   },
 
   createFolder: async (userId, name, parentId) => {

@@ -14,6 +14,7 @@ interface Props {
   noteId: string
   content: string
   onChange: (html: string) => void
+  fullWidth?: boolean
 }
 
 export function NoteEditor(props: Props) {

@@ -10,7 +10,7 @@ import { SearchModal } from './SearchModal'
 import { Tooltip, TooltipProvider } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 
-export function Sidebar() {
+export function Sidebar({ onOpenSettings }: { onOpenSettings?: () => void }) {
   const router   = useRouter()
   const pathname = usePathname()
   const { user } = useAuthStore()
@@ -179,7 +179,7 @@ export function Sidebar() {
           {/* Footer */}
           <div className="shrink-0 px-2 pb-3 pt-2 border-t border-[var(--border)] flex items-center gap-1">
             <button
-              onClick={() => { router.push('/settings'); setMobileOpen(false) }}
+              onClick={() => { onOpenSettings?.(); setMobileOpen(false) }}
               className={cn(
                 'flex items-center gap-2 flex-1 min-w-0 rounded-lg px-2 py-2 hover:bg-[var(--bg-muted)] transition-colors focus:outline-none',
                 collapsed && 'justify-center flex-none',
@@ -202,7 +202,7 @@ export function Sidebar() {
                   </button>
                 </Tooltip>
                 <Tooltip content="Settings">
-                  <button type="button" onClick={() => router.push('/settings')} className="flex justify-center items-center size-8 text-[var(--text-muted)] hover:bg-[var(--bg-muted)] rounded-lg focus:outline-none transition-colors">
+                  <button type="button" onClick={() => { onOpenSettings?.() }} className="flex justify-center items-center size-8 text-[var(--text-muted)] hover:bg-[var(--bg-muted)] rounded-lg focus:outline-none transition-colors">
                     <Settings size={15} />
                   </button>
                 </Tooltip>

@@ -2,7 +2,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GitBranch, Edit3, CheckSquare, Plus, X, ChevronLeft } from 'lucide-react'
+import { GitBranch, Edit3, Plus, X, ChevronLeft, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useEditorStore } from '@/store/editor'
 import { useAuthStore } from '@/store/auth'
@@ -18,12 +18,158 @@ const AISidebar = dynamic(() => import('@/components/editor/AISidebar').then(m =
 
 const MAX_TABS = 8
 
+// ── Doc context menu ──────────────────────────────────────────────────────
+interface MenuAction {
+  icon: React.ReactNode
+  label: string
+  shortcut?: string
+  danger?: boolean
+  divider?: boolean
+  onClick: () => void
+}
+
+function DocMenu({ actions, onClose }: { actions: MenuAction[]; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, scale: 0.96, y: -4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96, y: -4 }}
+      transition={{ duration: 0.1 }}
+      className="absolute top-full right-0 mt-1 z-50 w-56 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl overflow-hidden py-1"
+    >
+      {actions.map((action, i) => (
+        <div key={i}>
+          {action.divider && i > 0 && <div className="h-px bg-[var(--border)] my-1 mx-2" />}
+          <button
+            type="button"
+            onClick={() => { action.onClick(); onClose() }}
+            className={cn(
+              'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors focus:outline-none',
+              action.danger
+                ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30'
+                : 'text-[var(--text)] hover:bg-[var(--bg-muted)]'
+            )}
+          >
+            <span className="shrink-0 text-[var(--text-subtle)]">{action.icon}</span>
+            <span className="flex-1 text-left">{action.label}</span>
+            {action.shortcut && <span className="text-[11px] text-[var(--text-subtle)] font-mono">{action.shortcut}</span>}
+          </button>
+        </div>
+      ))}
+    </motion.div>
+  )
+}
+
+// ── Move-to folder modal ──────────────────────────────────────────────────
+function MoveToModal({ noteId, onClose }: { noteId: string; onClose: () => void }) {
+  const { folders, updateNote } = useNotesStore()
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  async function moveTo(folderId: string | null) {
+    await updateNote(noteId, { folder_id: folderId })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+      <motion.div ref={ref} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+        className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-2xl w-72 overflow-hidden">
+        <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+          <span className="text-sm font-semibold text-[var(--text)]">Move to folder</span>
+          <button onClick={onClose} className="size-6 flex items-center justify-center rounded text-[var(--text-subtle)] hover:bg-[var(--bg-muted)]"><X size={13} /></button>
+        </div>
+        <div className="py-1 max-h-64 overflow-y-auto">
+          <button onClick={() => moveTo(null)}
+            className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-muted)] transition-colors">
+            <FolderInput size={14} /> No folder (root)
+          </button>
+          {folders.map(f => (
+            <button key={f.id} onClick={() => moveTo(f.id)}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--bg-muted)] transition-colors">
+              <FolderInput size={14} className="text-[var(--text-subtle)]" /> {f.name}
+            </button>
+          ))}
+          {folders.length === 0 && <p className="px-4 py-3 text-xs text-[var(--text-subtle)]">No folders yet.</p>}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ── Version history modal ─────────────────────────────────────────────────
+function VersionHistoryModal({ noteId, onClose, onRestore }: { noteId: string; onClose: () => void; onRestore: (content: string) => void }) {
+  const { checkpoints } = useEditorStore()
+  const noteCheckpoints = checkpoints.filter(c => c.note_id === noteId)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('keydown', onKey) }
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+      <motion.div ref={ref} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+        className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-2xl w-80 overflow-hidden">
+        <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
+          <span className="text-sm font-semibold text-[var(--text)]">Version history</span>
+          <button onClick={onClose} className="size-6 flex items-center justify-center rounded text-[var(--text-subtle)] hover:bg-[var(--bg-muted)]"><X size={13} /></button>
+        </div>
+        <div className="py-1 max-h-72 overflow-y-auto">
+          {noteCheckpoints.length === 0 ? (
+            <div className="px-4 py-6 text-center">
+              <History size={24} className="mx-auto text-[var(--text-subtle)] mb-2" />
+              <p className="text-xs text-[var(--text-subtle)]">No checkpoints saved yet.</p>
+              <p className="text-xs text-[var(--text-subtle)] mt-1">Use the checkpoint action to save versions.</p>
+            </div>
+          ) : noteCheckpoints.map((cp, i) => (
+            <div key={cp.id} className={cn('flex items-center gap-3 px-4 py-2.5', i !== 0 && 'border-t border-[var(--border-subtle)]')}>
+              <div className="w-2 h-2 rounded-full bg-[var(--accent)] shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-[var(--text)] font-medium truncate">{cp.label}</p>
+                <p className="text-[10px] text-[var(--text-subtle)]">{new Date(cp.created_at).toLocaleString()}</p>
+              </div>
+              <button onClick={() => { if (confirm(`Restore to "${cp.label}"?`)) { onRestore(cp.content); onClose() } }}
+                className="text-xs text-[var(--accent)] hover:underline shrink-0">Restore</button>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────
 export default function EditorPage() {
   const params  = useParams()
   const router  = useRouter()
   const noteId  = params.id as string
 
-  const { notes, createNote, updateNote, loadNotes } = useNotesStore()
+  const { notes, createNote, updateNote, deleteNote, duplicateNote, loadNotes } = useNotesStore()
   const { user }    = useAuthStore()
   const hotkeys     = useSettingsStore((s) => s.hotkeys)
   const {
@@ -33,7 +179,13 @@ export default function EditorPage() {
 
   const note = notes.find((n) => n.id === noteId)
   const [openTabIds, setOpenTabIds] = useState<string[]>(() => [noteId])
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [showMoveTo, setShowMoveTo] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [fullWidth, setFullWidth] = useState(false)
+  const [locked, setLocked] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const menuBtnRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setOpenTabIds((prev) => {
@@ -46,15 +198,10 @@ export default function EditorPage() {
   useEffect(() => { if (noteId) loadCheckpoints(noteId) }, [noteId, loadCheckpoints])
 
   const handleContentChange = useCallback((html: string) => {
+    if (locked) return
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => updateNote(noteId, { content: html }), 800)
-  }, [noteId, updateNote])
-
-  async function addCheckpoint() {
-    if (!user || !note) return
-    const label = prompt('Checkpoint label:') ?? `Checkpoint ${checkpoints.filter(c => c.note_id === noteId).length + 1}`
-    await createCheckpoint(noteId, user.id, label, note.content, undefined)
-  }
+  }, [noteId, updateNote, locked])
 
   async function handleNewTab() {
     if (!user) return
@@ -78,6 +225,63 @@ export default function EditorPage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [hotkeys, view, setView])
 
+  function exportNote() {
+    if (!note) return
+    const blob = new Blob([note.content], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${note.title || 'untitled'}.html`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href)
+  }
+
+  function copyContent() {
+    if (!note) return
+    const text = note.content.replace(/<[^>]+>/g, '')
+    navigator.clipboard.writeText(text)
+  }
+
+  async function handleDuplicate() {
+    if (!user || !note) return
+    const copy = await duplicateNote(noteId, user.id)
+    router.push(`/editor/${copy.id}`)
+  }
+
+  async function handleTrash() {
+    if (!confirm('Move this note to trash?')) return
+    await deleteNote(noteId)
+    const next = openTabIds.filter(t => t !== noteId)
+    router.push(next.length > 0 ? `/editor/${next[next.length - 1]}` : '/home')
+  }
+
+  async function addCheckpoint() {
+    if (!user || !note) return
+    const label = prompt('Checkpoint label:') ?? `Checkpoint ${checkpoints.filter(c => c.note_id === noteId).length + 1}`
+    await createCheckpoint(noteId, user.id, label, note.content, undefined)
+  }
+
+  function restoreVersion(content: string) {
+    updateNote(noteId, { content })
+  }
+
+  const menuActions: MenuAction[] = [
+    { icon: <Copy size={14} />, label: 'Copy link', onClick: copyLink },
+    { icon: <FileText size={14} />, label: 'Copy page content', onClick: copyContent },
+    { icon: <FileText size={14} />, label: 'Duplicate', onClick: handleDuplicate, divider: true },
+    { icon: <FolderInput size={14} />, label: 'Move to…', onClick: () => setShowMoveTo(true) },
+    { icon: <Trash2 size={14} />, label: 'Move to trash', danger: true, onClick: handleTrash, divider: true },
+    { icon: fullWidth ? <Minimize2 size={14} /> : <Maximize2 size={14} />, label: fullWidth ? 'Default width' : 'Full width', onClick: () => setFullWidth(v => !v), divider: true },
+    { icon: locked ? <Unlock size={14} /> : <Lock size={14} />, label: locked ? 'Unlock page' : 'Lock page', onClick: () => setLocked(v => !v) },
+    { icon: <CheckSquare size={14} />, label: 'Save checkpoint', onClick: addCheckpoint, divider: true },
+    { icon: <History size={14} />, label: 'Version history', onClick: () => setShowHistory(true) },
+    { icon: <Download size={14} />, label: 'Export as HTML', onClick: exportNote },
+  ]
+
   const loading = useNotesStore(s => s.loading)
 
   if (!note && loading) return <div className="flex items-center justify-center h-full"><div className="w-5 h-5 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin" /></div>
@@ -89,14 +293,13 @@ export default function EditorPage() {
     <TooltipProvider>
       <div className="flex h-full overflow-hidden">
 
-        {/* LEFT: DocPanel (editing) or AISidebar (visualization) */}
+        {/* LEFT panel */}
         <AnimatePresence mode="wait">
           {view === 'editor' ? (
             <motion.div key="doc-panel"
               initial={{ width: 0, opacity: 0 }} animate={{ width: 260, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className="shrink-0 overflow-hidden border-r border-[var(--border)] flex flex-col">
-              {/* Back button */}
               <div className="h-11 flex items-center px-3 shrink-0 border-b border-[var(--border)]">
                 <button onClick={() => router.push('/home')}
                   className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors focus:outline-none">
@@ -125,7 +328,7 @@ export default function EditorPage() {
           )}
         </AnimatePresence>
 
-        {/* RIGHT: Editor area */}
+        {/* RIGHT: editor area */}
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">
 
           {/* Tab bar */}
@@ -142,8 +345,7 @@ export default function EditorPage() {
                         'after:absolute after:bottom-0 after:inset-x-0 after:h-0.5 after:bg-transparent',
                         'focus:outline-none transition-colors',
                         isActive ? 'text-[var(--text)] font-medium after:bg-[var(--accent)]' : 'text-[var(--text-subtle)] hover:text-[var(--text-muted)]'
-                      )}
-                    >
+                      )}>
                       <span className="max-w-[140px] truncate">{t.title || 'Untitled'}</span>
                       <span role="button" tabIndex={0} onClick={e => closeTab(t.id, e)}
                         className="flex items-center justify-center size-4 rounded opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-[var(--bg-muted)] text-[var(--text-muted)] transition-opacity">
@@ -160,15 +362,25 @@ export default function EditorPage() {
                 </Tooltip>
               </nav>
 
-              <div className="flex items-center gap-1 px-2 shrink-0">
-                {view === 'editor' && (
-                  <Tooltip content="Add checkpoint">
-                    <button type="button" onClick={addCheckpoint}
-                      className="flex items-center justify-center size-7 rounded-md text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)] transition-colors focus:outline-none">
-                      <CheckSquare size={14} />
-                    </button>
-                  </Tooltip>
+              {/* ⋯ menu */}
+              <div ref={menuBtnRef} className="flex items-center px-2 shrink-0 relative">
+                {locked && (
+                  <span className="mr-1 text-[10px] text-[var(--text-subtle)] flex items-center gap-1">
+                    <Lock size={10} /> Locked
+                  </span>
                 )}
+                <Tooltip content="Document options">
+                  <button type="button" onClick={() => setMenuOpen(v => !v)}
+                    className={cn(
+                      'flex items-center justify-center size-7 rounded-md transition-colors focus:outline-none',
+                      menuOpen ? 'bg-[var(--bg-muted)] text-[var(--text)]' : 'text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)]'
+                    )}>
+                    <MoreHorizontal size={15} />
+                  </button>
+                </Tooltip>
+                <AnimatePresence>
+                  {menuOpen && <DocMenu actions={menuActions} onClose={() => setMenuOpen(false)} />}
+                </AnimatePresence>
               </div>
             </div>
           </div>
@@ -177,8 +389,9 @@ export default function EditorPage() {
           <div className="flex-1 overflow-hidden min-w-0">
             <AnimatePresence mode="wait">
               {view === 'editor' ? (
-                <motion.div key="editor" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="h-full">
-                  <NoteEditor noteId={noteId} content={note.content} onChange={handleContentChange} />
+                <motion.div key="editor" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                  className={cn('h-full', locked && 'pointer-events-none select-none opacity-80')}>
+                  <NoteEditor noteId={noteId} content={note.content} onChange={handleContentChange} fullWidth={fullWidth} />
                 </motion.div>
               ) : (
                 <motion.div key="canvas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }} className="h-full">
@@ -188,7 +401,7 @@ export default function EditorPage() {
             </AnimatePresence>
           </div>
 
-          {/* Bottom floating mode switcher */}
+          {/* Bottom mode switcher */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               className="pointer-events-auto flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] rounded-full px-2 py-1.5 shadow-[var(--shadow-md)]">
@@ -206,6 +419,12 @@ export default function EditorPage() {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {showMoveTo && <MoveToModal noteId={noteId} onClose={() => setShowMoveTo(false)} />}
+        {showHistory && <VersionHistoryModal noteId={noteId} onClose={() => setShowHistory(false)} onRestore={restoreVersion} />}
+      </AnimatePresence>
     </TooltipProvider>
   )
 }
