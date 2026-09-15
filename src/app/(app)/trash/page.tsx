@@ -56,10 +56,7 @@ export default function TrashPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="shrink-0 px-4 pt-4 pb-3 border-b border-[var(--border)] flex items-center justify-between">
-        <div>
-          <h1 className="text-sm font-semibold text-[var(--text)]">Trash</h1>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">{deleted.length} deleted note{deleted.length !== 1 ? 's' : ''}</p>
-        </div>
+        <span className="text-xs text-[var(--text-subtle)]">{deleted.length} deleted note{deleted.length !== 1 ? 's' : ''}</span>
         {deleted.length > 0 && (
           <Button size="sm" variant="outline" onClick={emptyTrash} className="text-red-500 border-red-200 hover:bg-red-50">
             <Trash2 size={13} /> Empty trash

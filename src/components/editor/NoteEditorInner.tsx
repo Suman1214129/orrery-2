@@ -10,6 +10,7 @@ import TableRow from '@tiptap/extension-table-row'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import Image from '@tiptap/extension-image'
+import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
@@ -30,6 +31,7 @@ interface Props {
 
 export function NoteEditorInner({ noteId, content, onChange }: Props) {
   const notes = useNotesStore((s) => s.notes)
+  const updateNote = useNotesStore((s) => s.updateNote)
   const hotkeys = useSettingsStore((s) => s.hotkeys)
   const allTags = Array.from(new Set(notes.flatMap((n) => n.tags)))
 
@@ -38,9 +40,9 @@ export function NoteEditorInner({ noteId, content, onChange }: Props) {
       StarterKit.configure({
         heading: false,
         codeBlock: false,
-        link: { openOnClick: false, autolink: true },
       }),
       Heading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
+      Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer' } }),
       TaskList,
       TaskItem.configure({ nested: true }),
       Table.configure({ resizable: true }),
@@ -84,6 +86,20 @@ export function NoteEditorInner({ noteId, content, onChange }: Props) {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [editor, hotkeys])
+
+  // Auto-sync title from first H1
+  useEffect(() => {
+    if (!editor) return
+    const unsubscribe = editor.on('update', () => {
+      const doc = editor.state.doc
+      const firstNode = doc.firstChild
+      if (firstNode?.type.name === 'heading' && firstNode.attrs.level === 1) {
+        const h1Text = firstNode.textContent.trim()
+        if (h1Text) updateNote(noteId, { title: h1Text })
+      }
+    })
+    return () => { unsubscribe }
+  }, [editor, noteId]) // eslint-disable-line
 
   if (!editor) return null
 

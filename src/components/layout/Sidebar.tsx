@@ -42,9 +42,8 @@ export function Sidebar() {
 
   function navigate(href: string) { router.push(href); setMobileOpen(false) }
 
-  // home and all-docs are the same screen — both highlight all-docs
   function isActive(href: string) {
-    if (href === '/all-docs') return pathname === '/all-docs' || pathname === '/home'
+    if (href === '/home') return pathname === '/home' || pathname === '/all-docs'
     return pathname === href || pathname.startsWith(href + '/')
   }
 
@@ -53,7 +52,7 @@ export function Sidebar() {
   const displayName = (user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || '') as string
 
   const NAV = [
-    { href: '/all-docs', label: 'All Docs', icon: FileText, count: notes.length },
+    { href: '/home', label: 'All Docs', icon: FileText, count: notes.length },
     { href: '/labels',   label: 'Tags',     icon: Tag },
     { href: '/folders',  label: 'Folders',  icon: Folder },
     { href: '/archive',  label: 'Archive',  icon: Archive },

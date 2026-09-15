@@ -2,18 +2,22 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Plus, FileText, LayoutGrid, List } from 'lucide-react'
+import { Plus, FileText, LayoutGrid, List, Table2, SortAsc, SortDesc, Search } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useAuthStore } from '@/store/auth'
 import { cn, formatDate } from '@/lib/utils'
 
-type ViewMode = 'grid' | 'list'
+type ViewMode = 'grid' | 'list' | 'table'
+type SortKey = 'updated_at' | 'title' | 'created_at'
 
 export default function HomePage() {
   const router = useRouter()
   const { user } = useAuthStore()
   const { notes, folders, createNote } = useNotesStore()
   const [view, setView] = useState<ViewMode>('grid')
+  const [query, setQuery] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('updated_at')
+  const [sortAsc, setSortAsc] = useState(false)
 
   async function handleNewNote() {
     if (!user) return
@@ -21,39 +25,72 @@ export default function HomePage() {
     router.push(`/editor/${note.id}`)
   }
 
-  const recent = notes.slice(0, 20)
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortAsc(v => !v)
+    else { setSortKey(key); setSortAsc(false) }
+  }
 
   function getFolderName(folderId: string | null) {
     if (!folderId) return null
-    return folders.find((f) => f.id === folderId)?.name ?? null
+    return folders.find(f => f.id === folderId)?.name ?? null
   }
 
   function stripHtml(html: string) {
     return html.replace(/<[^>]+>/g, '').trim()
   }
 
+  const filtered = notes
+    .filter(n => !query || n.title.toLowerCase().includes(query.toLowerCase()) || n.content.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => {
+      const va = a[sortKey] ?? '', vb = b[sortKey] ?? ''
+      return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va)
+    })
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col) return null
+    return sortAsc
+      ? <SortAsc size={11} className="inline ml-1 text-[var(--accent)]" />
+      : <SortDesc size={11} className="inline ml-1 text-[var(--accent)]" />
+  }
+
   return (
     <div className="flex flex-col h-full overflow-hidden bg-[var(--bg)]">
 
-      {/* Page toolbar */}
-      <div className="shrink-0 flex items-center justify-between px-6 py-4">
-        <h1 className="text-xl font-bold text-[var(--text)]">Recent</h1>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-lg border border-[var(--border)] overflow-hidden">
-            <button onClick={() => setView('grid')} className={cn('flex items-center justify-center w-8 h-8 transition-colors focus:outline-none', view === 'grid' ? 'bg-[var(--bg-muted)] text-[var(--text)]' : 'text-[var(--text-subtle)] hover:text-[var(--text-muted)]')}>
-              <LayoutGrid size={14} />
-            </button>
-            <button onClick={() => setView('list')} className={cn('flex items-center justify-center w-8 h-8 transition-colors focus:outline-none', view === 'list' ? 'bg-[var(--bg-muted)] text-[var(--text)]' : 'text-[var(--text-subtle)] hover:text-[var(--text-muted)]')}>
-              <List size={14} />
-            </button>
-          </div>
+      {/* Toolbar */}
+      <div className="shrink-0 flex items-center gap-3 px-6 py-3 border-b border-[var(--border)]">
+        {/* Search */}
+        <div className="relative flex-1 max-w-xs">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Filter…"
+            className="w-full h-8 pl-7 pr-3 text-sm rounded-lg bg-[var(--bg-muted)] border border-transparent text-[var(--text)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border)]"
+          />
         </div>
+        <span className="text-xs text-[var(--text-subtle)] shrink-0">{filtered.length} doc{filtered.length !== 1 ? 's' : ''}</span>
+        <div className="flex-1" />
+        {/* View toggle */}
+        <div className="flex items-center rounded-lg border border-[var(--border)] overflow-hidden">
+          {([['grid', LayoutGrid], ['list', List], ['table', Table2]] as const).map(([v, Icon]) => (
+            <button key={v} onClick={() => setView(v)}
+              className={cn('flex items-center justify-center w-8 h-8 transition-colors focus:outline-none',
+                view === v ? 'bg-[var(--bg-muted)] text-[var(--text)]' : 'text-[var(--text-subtle)] hover:text-[var(--text-muted)]')}>
+              <Icon size={14} />
+            </button>
+          ))}
+        </div>
+        <button onClick={handleNewNote}
+          className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[var(--text)] text-[var(--bg)] text-xs font-medium hover:opacity-80 transition-opacity">
+          <Plus size={13} /> New
+        </button>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
-        {recent.length === 0 ? (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center h-full text-center gap-4">
+      <div className="flex-1 overflow-y-auto px-6 py-4">
+        {filtered.length === 0 ? (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center h-full text-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-[var(--bg-muted)] flex items-center justify-center">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="3" fill="var(--accent)" />
@@ -62,18 +99,71 @@ export default function HomePage() {
               </svg>
             </div>
             <div>
-              <p className="text-base font-semibold text-[var(--text)]">Start writing</p>
-              <p className="text-sm text-[var(--text-muted)] mt-1 max-w-xs">Create a note, write freely, and branch off alternate paths.</p>
+              <p className="text-base font-semibold text-[var(--text)]">{query ? 'No results' : 'Start writing'}</p>
+              <p className="text-sm text-[var(--text-muted)] mt-1 max-w-xs">
+                {query ? 'Try a different search term.' : 'Create a note, write freely, and branch off alternate paths.'}
+              </p>
             </div>
-            <button onClick={handleNewNote} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--text)] text-[var(--bg)] text-sm font-medium hover:opacity-80 transition-opacity">
-              <Plus size={14} /> Create your first note
-            </button>
+            {!query && (
+              <button onClick={handleNewNote}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--text)] text-[var(--bg)] text-sm font-medium hover:opacity-80 transition-opacity">
+                <Plus size={14} /> Create your first note
+              </button>
+            )}
           </motion.div>
+
+        ) : view === 'table' ? (
+          <table className="w-full text-sm border-collapse">
+            <thead className="sticky top-0 bg-[var(--bg)] z-10">
+              <tr className="border-b border-[var(--border)]">
+                <th className="text-left px-3 py-2 text-xs font-medium text-[var(--text-subtle)] w-full">
+                  <button onClick={() => toggleSort('title')} className="hover:text-[var(--text)] transition-colors">
+                    Title <SortIcon col="title" />
+                  </button>
+                </th>
+                <th className="text-left px-3 py-2 text-xs font-medium text-[var(--text-subtle)] whitespace-nowrap hidden sm:table-cell">
+                  <button onClick={() => toggleSort('created_at')} className="hover:text-[var(--text)] transition-colors">
+                    Created <SortIcon col="created_at" />
+                  </button>
+                </th>
+                <th className="text-left px-3 py-2 text-xs font-medium text-[var(--text-subtle)] whitespace-nowrap">
+                  <button onClick={() => toggleSort('updated_at')} className="hover:text-[var(--text)] transition-colors">
+                    Modified <SortIcon col="updated_at" />
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((note, i) => (
+                <motion.tr key={note.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.015 }}
+                  onClick={() => router.push(`/editor/${note.id}`)}
+                  className="border-b border-[var(--border)] hover:bg-[var(--bg-muted)] cursor-pointer transition-colors">
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <FileText size={14} className="text-[var(--text-subtle)] shrink-0" />
+                      <span className="text-[var(--text)] truncate max-w-xs">{note.title || 'Untitled'}</span>
+                      {note.tags?.length > 0 && (
+                        <div className="hidden sm:flex items-center gap-1">
+                          {note.tags.slice(0, 3).map(t => (
+                            <span key={t} className="px-1.5 py-0.5 text-[10px] rounded bg-[var(--bg-muted)] text-[var(--text-subtle)]">{t}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 text-xs text-[var(--text-subtle)] whitespace-nowrap hidden sm:table-cell">{formatDate(note.created_at)}</td>
+                  <td className="px-3 py-2.5 text-xs text-[var(--text-subtle)] whitespace-nowrap">{formatDate(note.updated_at)}</td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+
         ) : view === 'list' ? (
           <ul className="divide-y divide-[var(--border)]">
-            {recent.map((note, i) => (
+            {filtered.map((note, i) => (
               <motion.li key={note.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}>
-                <button onClick={() => router.push(`/editor/${note.id}`)} className="w-full flex items-center gap-3 py-3 px-1 text-left hover:bg-[var(--bg-muted)] rounded-lg transition-colors group">
+                <button onClick={() => router.push(`/editor/${note.id}`)}
+                  className="w-full flex items-center gap-3 py-3 px-1 text-left hover:bg-[var(--bg-muted)] rounded-lg transition-colors group">
                   <FileText size={14} className="text-[var(--text-subtle)] shrink-0" />
                   <span className="flex-1 text-sm text-[var(--text)] truncate">{note.title || 'Untitled'}</span>
                   <span className="text-xs text-[var(--text-subtle)] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">{formatDate(note.updated_at)}</span>
@@ -81,16 +171,15 @@ export default function HomePage() {
               </motion.li>
             ))}
           </ul>
+
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {/* New note card */}
             <motion.button whileHover={{ scale: 1.005 }} whileTap={{ scale: 0.995 }} onClick={handleNewNote}
               className="h-52 rounded-xl border-2 border-dashed border-[var(--border)] flex flex-col items-center justify-center gap-2 text-[var(--text-subtle)] hover:border-[var(--text-muted)] hover:text-[var(--text-muted)] transition-colors">
               <Plus size={22} />
               <span className="text-xs font-medium">New Document</span>
             </motion.button>
-
-            {recent.map((note, i) => {
+            {filtered.map((note, i) => {
               const preview = stripHtml(note.content).slice(0, 200)
               const folder = getFolderName(note.folder_id)
               return (
@@ -112,7 +201,7 @@ export default function HomePage() {
                   </div>
                   {note.tags?.length > 0 && (
                     <div className="shrink-0 flex flex-wrap gap-1">
-                      {note.tags.slice(0, 3).map((t) => (
+                      {note.tags.slice(0, 3).map(t => (
                         <span key={t} className="px-1.5 py-0.5 text-[9px] rounded-md bg-[var(--bg-muted)] text-[var(--text-subtle)]">{t}</span>
                       ))}
                     </div>
