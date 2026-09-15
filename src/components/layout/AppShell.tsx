@@ -34,12 +34,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-dvh overflow-hidden bg-[var(--bg)]">
       <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <div className="min-h-0 flex-1 overflow-hidden p-2">
-          <div className="mx-auto w-full h-full max-w-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
-            {children}
-          </div>
-        </div>
+      <div className="flex-1 min-w-0 overflow-hidden bg-[var(--surface)]">
+        {children}
       </div>
     </div>
   )
