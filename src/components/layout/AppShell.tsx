@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Global top bar — hidden on editor pages */}
       {!isEditor && (
-        <div className="shrink-0 h-14 flex items-center gap-3 px-4 bg-[var(--bg)]">
+        <div className="shrink-0 h-11 flex items-center gap-3 px-4 bg-[var(--bg)]">
           {/* Spacer matching sidebar width */}
           <div className="w-60 shrink-0" />
 

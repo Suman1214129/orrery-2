@@ -85,7 +85,7 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
 
           {/* Header row — aligns with global topbar */}
-          <div className="h-14 flex items-center px-3 shrink-0 gap-2">
+          <div className="h-11 flex items-center px-3 shrink-0 gap-2">
             {!collapsed && (
               <span className="flex-1 text-sm font-semibold text-[var(--text)] truncate">My Space</span>
             )}
