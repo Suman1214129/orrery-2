@@ -2,7 +2,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GitBranch, Edit3, Plus, X, ChevronLeft, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare } from 'lucide-react'
+import { GitBranch, Edit3, Plus, X, ChevronLeft, MoreHorizontal, Copy, FileText, FolderInput, Trash2, Maximize2, Minimize2, Lock, Unlock, Download, History, CheckSquare, BookOpen } from 'lucide-react'
 import { useNotesStore } from '@/store/notes'
 import { useEditorStore } from '@/store/editor'
 import { useAuthStore } from '@/store/auth'
@@ -184,6 +184,7 @@ export default function EditorPage() {
   const [showHistory, setShowHistory] = useState(false)
   const [fullWidth, setFullWidth] = useState(false)
   const [locked, setLocked] = useState(false)
+  const [readingMode, setReadingMode] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const menuBtnRef = useRef<HTMLDivElement>(null)
 
@@ -362,13 +363,29 @@ export default function EditorPage() {
                 </Tooltip>
               </nav>
 
-              {/* ⋯ menu */}
-              <div ref={menuBtnRef} className="flex items-center px-2 shrink-0 relative">
+              {/* Right controls: reading toggle + ⋯ menu */}
+              <div ref={menuBtnRef} className="flex items-center gap-1 px-2 shrink-0 relative">
                 {locked && (
                   <span className="mr-1 text-[10px] text-[var(--text-subtle)] flex items-center gap-1">
                     <Lock size={10} /> Locked
                   </span>
                 )}
+                {/* Reading / Editing toggle */}
+                <Tooltip content={readingMode ? 'Switch to editing' : 'Switch to reading'}>
+                  <button
+                    type="button"
+                    onClick={() => setReadingMode(v => !v)}
+                    className={cn(
+                      'flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium transition-colors focus:outline-none',
+                      readingMode
+                        ? 'bg-[var(--bg-muted)] text-[var(--text)]'
+                        : 'text-[var(--text-subtle)] hover:bg-[var(--bg-muted)] hover:text-[var(--text)]'
+                    )}
+                  >
+                    {readingMode ? <BookOpen size={13} /> : <Edit3 size={13} />}
+                    <span className="hidden sm:inline">{readingMode ? 'Reading' : 'Editing'}</span>
+                  </button>
+                </Tooltip>
                 <Tooltip content="Document options">
                   <button type="button" onClick={() => setMenuOpen(v => !v)}
                     className={cn(
@@ -390,7 +407,7 @@ export default function EditorPage() {
             <AnimatePresence mode="wait">
               {view === 'editor' ? (
                 <motion.div key="editor" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-                  className={cn('h-full', locked && 'pointer-events-none select-none opacity-80')}>
+                  className={cn('h-full', (locked || readingMode) && 'pointer-events-none select-none', readingMode && 'opacity-100', locked && 'opacity-80')}>
                   <NoteEditor noteId={noteId} content={note.content} onChange={handleContentChange} fullWidth={fullWidth} />
                 </motion.div>
               ) : (
